@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+# Der Pack wird lokal aus der Lichess-Datenbank erzeugt, siehe tools/build-pack.mjs
+src-tauri/resources/openings.pack
+src-tauri/resources/openings.json
+.DS_Store
+
+# IntelliJ
+.idea/
+*.iml

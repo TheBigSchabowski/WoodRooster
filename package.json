@@ -1,0 +1,31 @@
+{
+  "name": "schachtrainer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "build-pack": "node --max-old-space-size=8192 tools/build-pack.mjs",
+    "test": "tsc --noEmit && node tools/test-keys.mjs && node tools/test-solve.mjs && cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "android": "tauri android build --target aarch64 --apk"
+  },
+  "dependencies": {
+    "@lichess-org/chessground": "^10.1.1",
+    "@tauri-apps/api": "^2.11.1",
+    "chessops": "^0.15.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "ts-fsrs": "^5.4.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.0",
+    "typescript": "^5.9.0",
+    "vite": "^8.2.2"
+  }
+}
