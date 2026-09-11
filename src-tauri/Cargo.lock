@@ -2829,7 +2829,7 @@ dependencies = [
 
 [[package]]
 name = "schachtrainer"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "reqwest 0.12.28",
  "rusqlite",

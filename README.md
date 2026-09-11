@@ -18,8 +18,8 @@ app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
 > solved puzzle.
 >
 > **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/schachtrainer/releases/latest):
-> - [Android APK (arm64)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.3_android-arm64.apk)
-> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.3_macos-arm64.dmg)
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_macos-arm64.dmg)
 >
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
@@ -39,8 +39,8 @@ Fertig gebaute Installationsdateien können direkt heruntergeladen werden — ke
 
 | Plattform | Download | Details |
 |---|---|---|
-| **Android** | [`.apk` herunterladen (v0.1.3)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.3_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
-| **macOS** | [`.dmg` herunterladen (v0.1.3)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.3_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Android** | [`.apk` herunterladen (v0.1.4)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.1.4)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
 
 Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/schachtrainer/releases)**.
 

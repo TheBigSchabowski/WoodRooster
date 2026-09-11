@@ -40,7 +40,9 @@ export function PuzzleBoard(props: Props) {
       orientation: props.orientation,
       turnColor: props.turnColor,
       coordinates: true,
-      addPieceZIndex: true,
+      // Nur fuer 3D-Figurensaetze gedacht: setzt je Figur ein z-index bis 10 und
+      // schiebt sie damit ueber die Koordinaten. Cburnett ist flach.
+      addPieceZIndex: false,
       animation: { enabled: true, duration: 200 },
       highlight: { lastMove: true, check: true },
       // Lichess' Analyse-Boards ignorieren Touch-Eingaben neben Figuren nicht;
