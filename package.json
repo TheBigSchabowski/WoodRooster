@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "build-pack": "node --max-old-space-size=8192 tools/build-pack.mjs",
     "test": "tsc --noEmit && node tools/test-keys.mjs && node tools/test-solve.mjs && cargo test --manifest-path src-tauri/Cargo.toml --lib",
-    "android": "tauri android build --target aarch64 --apk"
+    "android": "tauri android build --target aarch64 --apk",
+    "build:all": "bash tools/build-binaries.sh"
   },
   "dependencies": {
     "@lichess-org/chessground": "^10.1.1",

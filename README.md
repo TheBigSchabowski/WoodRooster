@@ -17,6 +17,10 @@ app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
 > sent anywhere. The app touches the network only when you tap "view game" on a
 > solved puzzle.
 >
+> **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/schachtrainer/releases/latest):
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.0_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.0_macos-arm64.dmg)
+>
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
 
@@ -29,7 +33,22 @@ Puzzle „Partie ansehen“ antippt.
 
 Dank, Lizenz und die Rolle der KI-Beteiligung: **[CREDITS.md](CREDITS.md)**.
 
-## Starten und bauen
+## Download (Fertige Apps)
+
+Fertig gebaute Installationsdateien können direkt heruntergeladen werden — kein Terminal, kein Termux und kein manuelles Kompilieren nötig:
+
+| Plattform | Download | Details |
+|---|---|---|
+| **Android** | [`.apk` herunterladen (v0.1.0)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.0_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.1.0)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.0_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+
+Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/schachtrainer/releases)**.
+
+**Hinweise zur Installation:**
+- **Android:** Das APK im Browser auf dem Smartphone herunterladen und öffnen. Bei der Abfrage „Aus dieser Quelle installieren“ bzw. unbekannte Quellen die Erlaubnis für den Browser oder Dateimanager erteilen.
+- **macOS:** DMG öffnen und die App in den Programme-Ordner ziehen. Da die App als Hobbyprojekt nicht mit einem kostenpflichtigen Apple-Entwicklerzertifikat signiert ist, beim ersten Start: Rechtsklick auf die App → **Öffnen** → **Öffnen** bestätigen.
+
+## Starten und bauen (Entwicklung)
 
 ```sh
 npm install
