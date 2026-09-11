@@ -33,6 +33,8 @@ export function PuzzleBoard(props: Props) {
 
   useEffect(() => {
     if (!host.current) return;
+    const supportsDrag = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
     api.current = Chessground(host.current, {
       fen: props.fen,
       orientation: props.orientation,
@@ -41,12 +43,18 @@ export function PuzzleBoard(props: Props) {
       addPieceZIndex: true,
       animation: { enabled: true, duration: 200 },
       highlight: { lastMove: true, check: true },
+      // Lichess' Analyse-Boards ignorieren Touch-Eingaben neben Figuren nicht;
+      // der Chessground-Default (1) ist auf Touchscreens zu unpraegzise.
+      touchIgnoreRadius: 0,
       movable: {
         free: false,
         showDests: true,
         events: { after: (orig, dest) => onMove.current(orig, dest) },
       },
-      draggable: { enabled: true, showGhost: true },
+      // Auf Touchgeraeten ist Tap-Tap zuverlaessiger als Drag-and-Drop. Mit
+      // Maus/Trackpad bleibt Drag aktiv, wie am Desktop gewohnt.
+      draggable: { enabled: supportsDrag, showGhost: supportsDrag },
+      selectable: { enabled: true },
       premovable: { enabled: false },
     });
     return () => {
