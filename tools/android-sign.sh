@@ -1,12 +1,9 @@
 #!/bin/bash
-# Richtet die Signatur fuer das Release-APK ein.
+# Richtet Signatur und Android-Startcode fuer den Release-Build ein.
 #
-# Android installiert nur signierte APKs. Fuer den Eigenbedarf genuegt ein
-# selbst erzeugter Schluessel; Google Play waere etwas anderes.
-#
-# Das Skript ist wiederholbar: es erzeugt den Schluessel nur beim ersten Mal und
-# haengt die Gradle-Konfiguration nur an, wenn sie noch fehlt. Nach einem
-# erneuten `tauri android init` einfach nochmal laufen lassen.
+# src-tauri/gen/android ist von Tauri generiert und bewusst ignoriert.
+# Dieses Skript ist deshalb die reproduzierbare Quelle dafuer, wie das
+# generierte Projekt nach `tauri android init` aussehen muss.
 #
 #   ./tools/android-sign.sh
 
@@ -23,13 +20,21 @@ PASSFILE="$KEYDIR/schachtrainer-release.pass"
 ALIAS="schachtrainer"
 GRADLE="src-tauri/gen/android/app/build.gradle.kts"
 PROPS="src-tauri/gen/android/keystore.properties"
+MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/de/leidenschaftlicheslernen/schachtrainer/MainActivity.kt"
+MAIN_ACTIVITY_TEMPLATE="tools/android/MainActivity.kt"
+SIGNING_MARKER="SCHACHTRAINER_RELEASE_SIGNING"
 
 if [ ! -f "$GRADLE" ]; then
   echo "Kein Android-Projekt gefunden. Erst ausfuehren:" >&2
   echo "  source tools/android-env.sh && npm run tauri android init" >&2
   exit 1
 fi
+if [ ! -f "$MAIN_ACTIVITY_TEMPLATE" ]; then
+  echo "Fehlende Vorlage: $MAIN_ACTIVITY_TEMPLATE" >&2
+  exit 1
+fi
 
+umask 077
 mkdir -p "$KEYDIR"
 
 # --- Schluessel ---
@@ -38,7 +43,6 @@ if [ -f "$KEYSTORE" ]; then
 else
   echo "Erzeuge Schluessel: $KEYSTORE"
   # Zufaelliges Passwort; der Schluessel liegt bewusst ausserhalb des Projekts.
-  # Ohne Pipe erzeugt - `... | head -c 32` loest unter `set -o pipefail` SIGPIPE aus.
   openssl rand -hex 24 > "$PASSFILE"
   chmod 600 "$PASSFILE"
 
@@ -54,32 +58,50 @@ else
   echo
   echo "  WICHTIG: $KEYSTORE und $PASSFILE sichern."
   echo "  Ohne diesen Schluessel laesst sich eine spaetere Version der App nicht"
-  echo "  ueber die installierte druebersetzen - Android verweigert das dann."
+  echo "  ueber die installierte drueberspielen - Android verweigert das dann."
   echo
 fi
 
+if [ ! -f "$PASSFILE" ]; then
+  echo "Schluesselpasswort fehlt: $PASSFILE" >&2
+  exit 1
+fi
+
+STORE_PASSWORD="$(tr -d '\r\n' < "$PASSFILE")"
+if ! keytool -list -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
+  echo "Der vorhandene Schluessel passt nicht zum Passwort in $PASSFILE." >&2
+  exit 1
+fi
+
 # --- keystore.properties ---
+# Diese Datei liegt im ignorierten generierten Projekt und bleibt lokal.
 cat > "$PROPS" <<PROPEOF
 storeFile=$KEYSTORE
 keyAlias=$ALIAS
-storePassword=$(cat "$PASSFILE")
-keyPassword=$(cat "$PASSFILE")
+storePassword=$STORE_PASSWORD
+keyPassword=$STORE_PASSWORD
 PROPEOF
 chmod 600 "$PROPS"
 echo "Geschrieben: $PROPS"
 
-# --- Gradle ---
-if grep -q 'keystore.properties' "$GRADLE"; then
-  echo "Gradle ist bereits eingerichtet."
-  exit 0
-fi
+# --- Gradle-Signatur ---
+# Der alte Setup-Code hatte noch keinen Marker. `keystore.properties` ist eine
+# hinreichende Erkennung dafuer, damit ein bestehendes Projekt nicht doppelt
+# gepatcht wird.
+if grep -q "$SIGNING_MARKER" "$GRADLE" || grep -q 'keystore.properties' "$GRADLE"; then
+  echo "Gradle-Signatur ist bereits eingerichtet."
+else
+  python3 - "$GRADLE" <<'PYEOF'
+import io
+import sys
 
-python3 - "$GRADLE" <<'PYEOF'
-import io, sys
-p = sys.argv[1]
-s = io.open(p, encoding='utf-8').read()
+path = sys.argv[1]
+s = io.open(path, encoding="utf-8").read()
 
-load = '''
+if 'import java.util.Properties' not in s:
+    s = 'import java.util.Properties\n\n' + s
+
+loader = '''// SCHACHTRAINER_RELEASE_SIGNING
 // Signatur fuer das Release-APK, eingerichtet von tools/android-sign.sh.
 val keystoreProperties = Properties().apply {
     val f = rootProject.file("keystore.properties")
@@ -87,9 +109,10 @@ val keystoreProperties = Properties().apply {
 }
 
 '''
-anchor = 'android {\n'
-assert anchor in s
-s = s.replace(anchor, load + anchor, 1)
+android_anchor = 'android {\n'
+if android_anchor not in s:
+    raise SystemExit('android-Block nicht gefunden; Gradle-Datei wurde nicht angepasst.')
+s = s.replace(android_anchor, loader + android_anchor, 1)
 
 signing = '''    signingConfigs {
         create("release") {
@@ -103,114 +126,34 @@ signing = '''    signingConfigs {
     }
     buildTypes {
 '''
-assert '    buildTypes {\n' in s
-s = s.replace('    buildTypes {\n', signing, 1)
+build_types_anchor = '    buildTypes {\n'
+if build_types_anchor not in s:
+    raise SystemExit('buildTypes-Block nicht gefunden; Gradle-Datei wurde nicht angepasst.')
+s = s.replace(build_types_anchor, signing, 1)
 
-old_release = '''        getByName("release") {
+release_anchor = '''        getByName("release") {
             isMinifyEnabled = true'''
-new_release = '''        getByName("release") {
+release_replacement = '''        getByName("release") {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true'''
-assert old_release in s
-s = s.replace(old_release, new_release, 1)
+if release_anchor not in s:
+    raise SystemExit('Release-Buildtyp nicht gefunden; Gradle-Datei wurde nicht angepasst.')
+s = s.replace(release_anchor, release_replacement, 1)
 
-io.open(p, 'w', encoding='utf-8').write(s)
+io.open(path, mode="w", encoding="utf-8").write(s)
 print('Gradle-Konfiguration ergaenzt.')
 PYEOF
 fi
 
-# --- MainActivity: Asset-Extraktion fuer Android ---
-MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/de/leidenschaftlicheslernen/schachtrainer/MainActivity.kt"
-if [ -f "$MAIN_ACTIVITY" ] && ! grep -q 'extractResourcesIfNeeded' "$MAIN_ACTIVITY"; then
-  cat > "$MAIN_ACTIVITY" <<'KTEOF'
-package de.leidenschaftlicheslernen.schachtrainer
-
-import android.os.Bundle
-import android.util.Log
-import androidx.activity.enableEdgeToEdge
-import java.io.File
-import java.io.FileOutputStream
-
-class MainActivity : TauriActivity() {
-  companion object {
-    private const val TAG = "Schachtrainer"
-  }
-
-  override fun onCreate(savedInstanceState: Bundle?) {
-    extractResourcesIfNeeded()
-    enableEdgeToEdge()
-    super.onCreate(savedInstanceState)
-  }
-
-  private fun extractResourcesIfNeeded() {
-    try {
-      val resourcesDir = File(filesDir, "resources")
-      if (!resourcesDir.exists()) {
-        resourcesDir.mkdirs()
-      }
-
-      val versionMarker = File(resourcesDir, ".version")
-      val currentVersion = BuildConfig.VERSION_CODE.toString()
-      val versionMatches = versionMarker.exists() && versionMarker.readText().trim() == currentVersion
-
-      val filesToExtract = listOf("openings.json", "openings.pack")
-      var allFilesExist = true
-      for (fileName in filesToExtract) {
-        val targetFile = File(resourcesDir, fileName)
-        if (!targetFile.exists() || targetFile.length() == 0L) {
-          allFilesExist = false
-          break
-        }
-      }
-
-      if (versionMatches && allFilesExist) {
-        return
-      }
-
-      Log.i(TAG, "Extracting resources to ${resourcesDir.absolutePath}...")
-
-      for (fileName in filesToExtract) {
-        val targetFile = File(resourcesDir, fileName)
-
-        val assetPath = try {
-          assets.open("resources/$fileName").close()
-          "resources/$fileName"
-        } catch (_: Exception) {
-          try {
-            assets.open(fileName).close()
-            fileName
-          } catch (_: Exception) {
-            null
-          }
-        } ?: continue
-
-        val tempFile = File(resourcesDir, "$fileName.tmp")
-        assets.open(assetPath).use { input ->
-          FileOutputStream(tempFile).use { output ->
-            val buffer = ByteArray(64 * 1024)
-            var bytesRead: Int
-            while (input.read(buffer).also { bytesRead = it } != -1) {
-              output.write(buffer, 0, bytesRead)
-            }
-            output.flush()
-          }
-        }
-
-        if (tempFile.exists() && tempFile.length() > 0L) {
-          if (targetFile.exists()) {
-            targetFile.delete()
-          }
-          tempFile.renameTo(targetFile)
-        }
-      }
-
-      versionMarker.writeText(currentVersion)
-    } catch (e: Exception) {
-      Log.e(TAG, "Error extracting resources: ${e.message}", e)
-    }
-  }
-}
-KTEOF
-  echo "MainActivity.kt mit Asset-Extraktion aktualisiert."
+# --- MainActivity ---
+# Diese Datei wird immer auf die getrackte Vorlage gebracht. Damit werden auch
+# alte, kaputte Versionen nach einem erneuten `tauri android init` repariert.
+mkdir -p "$(dirname "$MAIN_ACTIVITY")"
+if cmp -s "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY"; then
+  echo "MainActivity ist bereits aktuell."
+else
+  cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY"
+  echo "MainActivity aktualisiert: $MAIN_ACTIVITY"
 fi
 
+echo "Android-Release-Setup abgeschlossen."

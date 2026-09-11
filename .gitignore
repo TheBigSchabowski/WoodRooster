@@ -6,7 +6,6 @@ src-tauri/gen/
 src-tauri/resources/openings.pack
 src-tauri/resources/openings.json
 .DS_Store
-
 # IntelliJ
 .idea/
 *.iml

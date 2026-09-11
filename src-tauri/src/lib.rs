@@ -16,27 +16,38 @@ use pack::Pack;
 /// beim ersten App-Start von Kotlin in das App-Datenverzeichnis (`app_data_dir`/`filesDir`)
 /// entpackt. Auf dem Desktop (macOS/Linux/Windows) liegen sie im `resource_dir`.
 fn find_resource_file(app: &tauri::App, name: &str) -> Result<std::path::PathBuf, String> {
-    // 1. Zuerst im App-Datenverzeichnis nachsehen (fuer Android und portable Setups)
-    if let Ok(data_dir) = app.path().app_data_dir() {
-        let candidate = data_dir.join("resources").join(name);
-        if candidate.exists() {
-            return Ok(candidate);
+    fn in_dir(dir: &std::path::Path, name: &str) -> Option<std::path::PathBuf> {
+        let with_prefix = dir.join("resources").join(name);
+        if with_prefix.exists() {
+            return Some(with_prefix);
         }
-        let candidate = data_dir.join(name);
-        if candidate.exists() {
-            return Ok(candidate);
+
+        let without_prefix = dir.join(name);
+        if without_prefix.exists() {
+            return Some(without_prefix);
+        }
+
+        None
+    }
+
+    // Auf Android liefert Tauri `activity.dataDir` zurueck, also den Wurzelordner
+    // der App-daten. Kotlin legt die extrahierten Dateien aber standardmaessig
+    // unter `filesDir` ab. Deshalb muss zusaetzlich `dataDir/files` geprueft
+    // werden - andernfalls sucht Rust in `/data/.../resources`, waehrend die
+    // Dateien tatsaechlich in `/data/.../files/resources` liegen.
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        if let Some(path) = in_dir(&data_dir.join("files"), name) {
+            return Ok(path);
+        }
+        if let Some(path) = in_dir(&data_dir, name) {
+            return Ok(path);
         }
     }
 
-    // 2. Im Bundle-Ressourcenverzeichnis nachsehen (Desktop wie macOS)
+    // Auf dem Desktop (macOS/Linux/Windows) liegen die Dateien im Bundle.
     if let Ok(res_dir) = app.path().resource_dir() {
-        let candidate = res_dir.join("resources").join(name);
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-        let candidate = res_dir.join(name);
-        if candidate.exists() {
-            return Ok(candidate);
+        if let Some(path) = in_dir(&res_dir, name) {
+            return Ok(path);
         }
     }
 

@@ -18,8 +18,8 @@ app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
 > solved puzzle.
 >
 > **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/schachtrainer/releases/latest):
-> - [Android APK (arm64)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.1_android-arm64.apk)
-> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.1_macos-arm64.dmg)
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.2_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.2_macos-arm64.dmg)
 >
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
@@ -39,8 +39,8 @@ Fertig gebaute Installationsdateien können direkt heruntergeladen werden — ke
 
 | Plattform | Download | Details |
 |---|---|---|
-| **Android** | [`.apk` herunterladen (v0.1.1)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.1_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
-| **macOS** | [`.dmg` herunterladen (v0.1.1)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.1_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Android** | [`.apk` herunterladen (v0.1.2)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.2_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.1.2)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.2_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
 
 Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/schachtrainer/releases)**.
 
@@ -62,7 +62,7 @@ Für Android:
 ```sh
 source tools/android-env.sh
 npm run tauri android init      # einmalig
-./tools/android-sign.sh         # einmalig, erzeugt den Signaturschlüssel
+./tools/android-sign.sh         # richtet Signatur und Android-Startcode ein
 npm run android                 # erzeugt das .apk für arm64
 ```
 
@@ -81,6 +81,15 @@ APK aufs Handy (USB-Debugging aktiviert):
 ```sh
 adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
 ```
+
+Beide fertigen Installationsdateien auf einmal (nach einmaligem Android-Setup):
+
+```sh
+npm run build:all
+```
+
+Das Skript baut DMG und APK, benennt sie für die Releases um und erzeugt
+`dist/releases/SHA256SUMS.txt`.
 
 ## Bedienung während einer Sitzung
 
