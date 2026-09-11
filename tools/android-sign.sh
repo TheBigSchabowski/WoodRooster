@@ -117,3 +117,100 @@ s = s.replace(old_release, new_release, 1)
 io.open(p, 'w', encoding='utf-8').write(s)
 print('Gradle-Konfiguration ergaenzt.')
 PYEOF
+fi
+
+# --- MainActivity: Asset-Extraktion fuer Android ---
+MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/de/leidenschaftlicheslernen/schachtrainer/MainActivity.kt"
+if [ -f "$MAIN_ACTIVITY" ] && ! grep -q 'extractResourcesIfNeeded' "$MAIN_ACTIVITY"; then
+  cat > "$MAIN_ACTIVITY" <<'KTEOF'
+package de.leidenschaftlicheslernen.schachtrainer
+
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.enableEdgeToEdge
+import java.io.File
+import java.io.FileOutputStream
+
+class MainActivity : TauriActivity() {
+  companion object {
+    private const val TAG = "Schachtrainer"
+  }
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    extractResourcesIfNeeded()
+    enableEdgeToEdge()
+    super.onCreate(savedInstanceState)
+  }
+
+  private fun extractResourcesIfNeeded() {
+    try {
+      val resourcesDir = File(filesDir, "resources")
+      if (!resourcesDir.exists()) {
+        resourcesDir.mkdirs()
+      }
+
+      val versionMarker = File(resourcesDir, ".version")
+      val currentVersion = BuildConfig.VERSION_CODE.toString()
+      val versionMatches = versionMarker.exists() && versionMarker.readText().trim() == currentVersion
+
+      val filesToExtract = listOf("openings.json", "openings.pack")
+      var allFilesExist = true
+      for (fileName in filesToExtract) {
+        val targetFile = File(resourcesDir, fileName)
+        if (!targetFile.exists() || targetFile.length() == 0L) {
+          allFilesExist = false
+          break
+        }
+      }
+
+      if (versionMatches && allFilesExist) {
+        return
+      }
+
+      Log.i(TAG, "Extracting resources to ${resourcesDir.absolutePath}...")
+
+      for (fileName in filesToExtract) {
+        val targetFile = File(resourcesDir, fileName)
+
+        val assetPath = try {
+          assets.open("resources/$fileName").close()
+          "resources/$fileName"
+        } catch (_: Exception) {
+          try {
+            assets.open(fileName).close()
+            fileName
+          } catch (_: Exception) {
+            null
+          }
+        } ?: continue
+
+        val tempFile = File(resourcesDir, "$fileName.tmp")
+        assets.open(assetPath).use { input ->
+          FileOutputStream(tempFile).use { output ->
+            val buffer = ByteArray(64 * 1024)
+            var bytesRead: Int
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+              output.write(buffer, 0, bytesRead)
+            }
+            output.flush()
+          }
+        }
+
+        if (tempFile.exists() && tempFile.length() > 0L) {
+          if (targetFile.exists()) {
+            targetFile.delete()
+          }
+          tempFile.renameTo(targetFile)
+        }
+      }
+
+      versionMarker.writeText(currentVersion)
+    } catch (e: Exception) {
+      Log.e(TAG, "Error extracting resources: ${e.message}", e)
+    }
+  }
+}
+KTEOF
+  echo "MainActivity.kt mit Asset-Extraktion aktualisiert."
+fi
+

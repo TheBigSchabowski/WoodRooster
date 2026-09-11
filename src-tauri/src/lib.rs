@@ -11,26 +11,49 @@ use tauri::Manager;
 use commands::{AppState, CatalogEntry};
 use pack::Pack;
 
-/// Sucht eine mitgelieferte Ressource. Je nach Plattform legt Tauri sie mit
-/// oder ohne das `resources/`-Praefix ab, deshalb beide Varianten pruefen.
-fn resource(dir: &std::path::Path, name: &str) -> std::path::PathBuf {
-    let with_prefix = dir.join("resources").join(name);
-    if with_prefix.exists() {
-        with_prefix
-    } else {
-        dir.join(name)
+/// Sucht eine mitgelieferte Ressource.
+/// Auf Android liegen mitgelieferte Dateien nicht direkt im Host-Dateisystem, sondern werden
+/// beim ersten App-Start von Kotlin in das App-Datenverzeichnis (`app_data_dir`/`filesDir`)
+/// entpackt. Auf dem Desktop (macOS/Linux/Windows) liegen sie im `resource_dir`.
+fn find_resource_file(app: &tauri::App, name: &str) -> Result<std::path::PathBuf, String> {
+    // 1. Zuerst im App-Datenverzeichnis nachsehen (fuer Android und portable Setups)
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        let candidate = data_dir.join("resources").join(name);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+        let candidate = data_dir.join(name);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
     }
+
+    // 2. Im Bundle-Ressourcenverzeichnis nachsehen (Desktop wie macOS)
+    if let Ok(res_dir) = app.path().resource_dir() {
+        let candidate = res_dir.join("resources").join(name);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+        let candidate = res_dir.join(name);
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+
+    Err(format!(
+        "Ressource '{name}' konnte weder im App-Datenverzeichnis noch im Ressourcenverzeichnis gefunden werden."
+    ))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            let res_dir = app.path().resource_dir()?;
+            let pack_path = find_resource_file(app, "openings.pack")?;
+            let pack = Pack::open(&pack_path)?;
 
-            let pack = Pack::open(&resource(&res_dir, "openings.pack"))?;
-
-            let catalog_raw = std::fs::read(resource(&res_dir, "openings.json")).map_err(|e| {
+            let json_path = find_resource_file(app, "openings.json")?;
+            let catalog_raw = std::fs::read(&json_path).map_err(|e| {
                 format!("openings.json nicht lesbar ({e}). Erzeugen mit: npm run build-pack")
             })?;
             let catalog: Vec<CatalogEntry> = serde_json::from_slice(&catalog_raw)
