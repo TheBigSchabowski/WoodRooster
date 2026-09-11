@@ -24,6 +24,17 @@ for resource in \
   fi
 done
 
+# Bricht ein DMG-Build ab, bleibt sein Arbeitsabbild angehaengt - und genau
+# daran scheitert dann der naechste Lauf ("error running bundle_dmg.sh").
+echo "==> Loese haengengebliebene DMG-Arbeitsabbilder..."
+hdiutil info | awk -v dir="$PWD/src-tauri/target/" '
+    index($0, "image-path") == 1 && index($0, dir) && /\/rw\..*\.dmg$/ { found = 1 }
+    /^\/dev\/disk/ && found { print $1; found = 0 }' |
+  while read -r dev; do
+    echo "    $dev"
+    hdiutil detach "$dev" -force >/dev/null 2>&1 || true
+  done
+
 echo "==> Baue macOS DMG..."
 npm run tauri build
 
