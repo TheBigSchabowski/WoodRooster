@@ -52,8 +52,17 @@ dem alten Schachtrainer; dort beginnt der Lernstand neu.
   nicht als Fehlversuch. Die bisherigen Züge stehen als Liste daneben. `B` (oder
   der Holzdeckel) klappt das Brett zum Nachsehen auf und wieder zu; während der
   Einprägezeit klappt `B` sofort zu. Nach dem Lösen geht das Brett von selbst
-  auf. Ein- und ausschalten: „Blind“ oben in der Sitzung oder in den
-  Einstellungen.
+  auf. Ein- und ausschalten: Doppeltippen oben links (siehe unten), „Blind“
+  oben in der Sitzung oder in den Einstellungen.
+- **Doppeltippen (Kacheln, wie in FireHorse):** Der Bildschirm ist in Kacheln
+  geteilt, standardmäßig zwei Spalten und drei Reihen. Zweimal schnell auf eine
+  freie Stelle tippen oder klicken — kein Knopf, kein Textfeld, nicht das Brett —
+  führt aus, was dieser Kachel zugeordnet ist; eine kurze Meldung unten sagt,
+  was passiert ist. Standard: oben links Blind an/aus, oben rechts Brett
+  auf/zu, Mitte links Zeichnen, Mitte rechts Lösung zeigen, unten links Puzzle
+  merken, unten rechts nichts. Raster (1–3 Spalten, 1–4 Reihen) und Belegung
+  jeder Kachel stellst du unter Einstellungen → Doppeltippen ein, dort lässt
+  es sich auch ganz ausschalten.
 - **Brettfarben per Hexcode:** helle und dunkle Felder frei wählbar
   (Einstellungen → Brettfarben), über den Farbwähler, als `#E6C99B` oder kurz
   `#ec9`, dazu fünf Vorlagen (Braun, Holz, Blau, Grün, Grau). Die Koordinaten
@@ -244,7 +253,8 @@ tools/android-env.sh      Umgebungsvariablen für den Android-Build
 src/board/solve.ts        Abspiel-Logik eines Puzzles, getippte Züge, Zugliste
 src/board/PuzzleBoard.tsx Brett (chessground), Zeichenmodus, eigene Feldfarben
 src/board/drawing.ts      Pfeile, Kreise, Felder und Stifte (wie FireHorse)
-src/board/prefs.ts        Brettfarben, Stifte, Blindmodus (Schlüssel „board“)
+src/board/prefs.ts        Brettfarben, Stifte, Blindmodus, Kacheln (Schlüssel „board“)
+src/tapzones.ts           Doppeltippen: Kacheln, Befehle, Erkennung
 src/srs/scheduler.ts      FSRS-Anbindung, Intervalle für die Bewertungsknöpfe
 src/screens/              Start, Eröffnung, Sitzung, Einstellungen
 
@@ -275,7 +285,8 @@ Das führt vier Dinge aus:
   wirklich abgelehnt wird
 - `tools/test-blind.mjs` — tippt die Lösungen von gut 800 Puzzlen abwechselnd
   englisch, deutsch und in UCI ein (inklusive Rochade und Umwandlung) und prüft
-  die Zugliste, dazu das Zeichnen und das Lesen der Stiftfarben
+  die Zugliste, dazu das Zeichnen, das Lesen der Stiftfarben und die Kacheln
+  beim Doppeltippen
 - `cargo test --lib` — die SQL-Abfragen laufen gegen eine SQLite-Datenbank im
   Speicher, jeder Sitzungsmodus einzeln
 

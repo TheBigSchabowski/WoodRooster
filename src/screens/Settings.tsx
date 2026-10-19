@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { DEFAULT_SETTINGS, DIFFICULTIES, type SrsSettings } from '../srs/scheduler';
 import { BOARD_THEMES, DEFAULT_BOARD, type BoardPrefs } from '../board/prefs';
 import { INKS, normalizeHex, pensFrom, savePen, type PenColor } from '../board/drawing';
+import { COMMANDS, TAP_COLS_MAX, TAP_ROWS_MAX, commandAt, commandOf, withGrid, zoneLabel } from '../tapzones';
 
 interface Props {
   settings: SrsSettings;
@@ -20,6 +21,9 @@ export function Settings({ settings, board, onSave, onBack }: Props) {
   const pens = pensFrom(b.pens);
   const setPen = (i: number, pen: PenColor) =>
     changeBoard('pens', pens.map((p, j) => savePen(j === i ? pen : p)));
+  // Blind laesst sich auch hier per Doppeltippen umschalten; das soll beim
+  // Speichern nicht wieder ueberschrieben werden.
+  useEffect(() => setB((prev) => ({ ...prev, blind: board.blind })), [board.blind]);
   // Der Stift, auf den ein Klick in die Farbleiste wirkt.
   const [activePen, setActivePen] = useState(0);
 
@@ -267,6 +271,72 @@ export function Settings({ settings, board, onSave, onBack }: Props) {
       </div>
 
       <div className="panel">
+        <h2>Doppeltippen</h2>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={b.tapZonesOn}
+            onChange={(e) => changeBoard('tapZonesOn', e.target.checked)}
+          />
+          Zweimal auf eine freie Stelle tippen führt einen Befehl aus
+        </label>
+        {b.tapZonesOn && (
+          <>
+            <div className="steppers">
+              <Stepper
+                label="Spalten"
+                value={b.tapCols}
+                min={1}
+                max={TAP_COLS_MAX}
+                onChange={(n) => setB((prev) => ({ ...prev, ...withGrid(prev, n, prev.tapRows) }))}
+              />
+              <Stepper
+                label="Reihen"
+                value={b.tapRows}
+                min={1}
+                max={TAP_ROWS_MAX}
+                onChange={(n) => setB((prev) => ({ ...prev, ...withGrid(prev, prev.tapCols, n) }))}
+              />
+            </div>
+            <p className="muted small">
+              Der Bildschirm in {b.tapCols * b.tapRows} Kachel
+              {b.tapCols * b.tapRows === 1 ? '' : 'n'}, so wie er aufgeteilt ist. Je Kachel
+              festlegen, was ein Doppeltipp dort macht. Knöpfe, Textfelder und das Brett
+              zählen nicht als freie Stelle – dort bleibt alles wie gewohnt.
+            </p>
+            <div className="zone-grid" style={{ gridTemplateColumns: `repeat(${b.tapCols}, 1fr)` }}>
+              {Array.from({ length: b.tapCols * b.tapRows }, (_, i) => {
+                const id = commandAt(b, i);
+                return (
+                  <label key={i} className={`zone-tile ${id ? 'set' : ''}`}>
+                    <span className="muted small">{zoneLabel(i, b.tapCols, b.tapRows)}</span>
+                    <b>{id ? commandOf(id)?.short : '—'}</b>
+                    <select
+                      value={id ?? ''}
+                      onChange={(e) =>
+                        changeBoard(
+                          'tapZones',
+                          b.tapZones.map((z, j) => (j === i ? e.target.value : z)),
+                        )
+                      }
+                      aria-label={`Befehl für ${zoneLabel(i, b.tapCols, b.tapRows)}`}
+                    >
+                      <option value="">Nichts</option>
+                      {COMMANDS.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="panel">
         <div className="actions">
           <button onClick={() => onSave(s, b)}>Speichern</button>
           <button
@@ -337,5 +407,30 @@ function ColorRow({ label, value, onChange }: { label?: string; value: string; o
         aria-label={label ? `${label} als Hexcode` : 'Hexcode'}
       />
     </label>
+  );
+}
+
+function Stepper(props: { label: string; value: number; min: number; max: number; onChange: (n: number) => void }) {
+  return (
+    <div className="stepper">
+      <span className="muted small">{props.label}</span>
+      <div className="stepper-row">
+        <button
+          onClick={() => props.onChange(props.value - 1)}
+          disabled={props.value <= props.min}
+          aria-label={`${props.label}: weniger`}
+        >
+          −
+        </button>
+        <b>{props.value}</b>
+        <button
+          onClick={() => props.onChange(props.value + 1)}
+          disabled={props.value >= props.max}
+          aria-label={`${props.label}: mehr`}
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }

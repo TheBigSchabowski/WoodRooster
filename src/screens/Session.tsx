@@ -7,6 +7,7 @@ import { PuzzleBoard } from '../board/PuzzleBoard';
 import { PuzzleRunner } from '../board/solve';
 import { pensFrom } from '../board/drawing';
 import type { BoardPrefs } from '../board/prefs';
+import { onCommand } from '../tapzones';
 import {
   fetchGame,
   nextBatch,
@@ -144,6 +145,33 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
     setPeeks((n) => n + 1);
     setBoardOpen(true);
   }
+
+  /** Spielt den naechsten Loesungszug vor. */
+  function revealStep() {
+    if (!runner || phase !== 'solving') return;
+    setShowSolution(true);
+    const res = runner.revealNext();
+    tick();
+    if (res.outcome === 'solved') {
+      setTally((t) => ({ solved: t.solved + 1, slipped: t.slipped + 1 }));
+      finishPuzzle();
+    } else if (res.reply) {
+      replyTimer.current = window.setTimeout(() => {
+        runner.applyReply();
+        tick();
+        if (runner.finished) finishPuzzle();
+      }, 380);
+    }
+  }
+
+  // Doppeltippen auf eine Kachel; neu gebunden bei jedem Rendern wie die Tasten.
+  useEffect(() =>
+    onCommand((id) => {
+      if (id === 'BOARD') flipBoard();
+      else if (id === 'SOLUTION') revealStep();
+      else if (id === 'FAVORITE') flipFavorite();
+    }),
+  );
 
   /** Ein getippter Zug, wie ein Zug auf dem Brett. */
   function submitTyped() {
@@ -517,24 +545,7 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
                 </p>
               )}
               <div className="actions">
-                <button
-                  className="ghost"
-                  onClick={() => {
-                    setShowSolution(true);
-                    const res = runner.revealNext();
-                    tick();
-                    if (res.outcome === 'solved') {
-                      setTally((t) => ({ solved: t.solved + 1, slipped: t.slipped + 1 }));
-                      finishPuzzle();
-                    } else if (res.reply) {
-                      replyTimer.current = window.setTimeout(() => {
-                        runner.applyReply();
-                        tick();
-                        if (runner.finished) finishPuzzle();
-                      }, 380);
-                    }
-                  }}
-                >
+                <button className="ghost" onClick={revealStep}>
                   Lösung zeigen
                 </button>
               </div>

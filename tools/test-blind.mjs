@@ -6,6 +6,7 @@ import { openSync, readSync, closeSync } from 'node:fs';
 import { zstdDecompress } from 'node:zlib';
 import { promisify } from 'node:util';
 import { PuzzleRunner } from '../src/board/solve.ts';
+import { DEFAULT_TAP, commandAt, withGrid, zoneAt, zoneLabel } from '../src/tapzones.ts';
 import { normalizeHex, parsePen, pensFrom, savePen, toggle, DEFAULT_PENS } from '../src/board/drawing.ts';
 
 const unzstd = promisify(zstdDecompress);
@@ -38,6 +39,20 @@ check(parsePen('#882020')?.label === 'Rot', 'Code einer Tinte heisst wie sie');
 check(savePen({ hex: '#15781B', label: 'Grün' }) === 'GREEN', 'Tinte als Name gespeichert');
 check(pensFrom(['#ABCDEF Himmel', 'kaputt'])[1].hex === DEFAULT_PENS[1].hex, 'kaputter Stift behaelt Vorgabe');
 check(pensFrom(['#ABCDEF Himmel'])[0].label === 'Himmel', 'eigener Stift gelesen');
+
+// ---------- Doppeltippen ----------
+
+check(zoneAt(10, 10, 600, 900, 2, 3) === 0, 'oben links ist Kachel 0');
+check(zoneAt(599, 899, 600, 900, 2, 3) === 5, 'unten rechts ist Kachel 5');
+check(zoneAt(650, 950, 600, 900, 2, 3) === 5, 'ausserhalb bleibt am Rand');
+check(zoneLabel(2, 2, 3) === 'Mitte links', 'Beschriftung Mitte links');
+check(zoneLabel(0, 1, 1) === 'ganzer Bildschirm', 'eine Kachel ist der ganze Bildschirm');
+check(commandAt(DEFAULT_TAP, 0) === 'BLIND', 'oben links schaltet Blind');
+const wide = withGrid(DEFAULT_TAP, 3, 3);
+check(wide.tapZones.length === 9 && commandAt(wide, 1) === 'BOARD' && commandAt(wide, 3) === 'DRAW' && !commandAt(wide, 2), 'breiteres Raster behaelt die Befehle');
+const back = withGrid(wide, 2, 3);
+check(back.tapZones.join() === DEFAULT_TAP.tapZones.join(), 'zurueck auf 2x3 ergibt das Alte');
+check(withGrid(DEFAULT_TAP, 9, 0).tapCols === 3 && withGrid(DEFAULT_TAP, 9, 0).tapRows === 1, 'Raster wird begrenzt');
 
 // ---------- Zugeingabe ----------
 

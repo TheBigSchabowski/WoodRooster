@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Home } from './screens/Home';
 import { Opening } from './screens/Opening';
 import { Session } from './screens/Session';
@@ -6,6 +6,7 @@ import { Settings } from './screens/Settings';
 import { getSetting, setSetting, type BatchFilter } from './api/commands';
 import { DEFAULT_SETTINGS, type SrsSettings } from './srs/scheduler';
 import { BOARD_KEY, DEFAULT_BOARD, type BoardPrefs } from './board/prefs';
+import { commandAt, commandOf, listenDoubleTaps, sendCommand } from './tapzones';
 
 type View =
   | { name: 'home' }
@@ -61,57 +62,100 @@ export function App() {
     [saveQuiet, saveBoard],
   );
 
+  // Doppeltippen auf eine freie Stelle: Blind schaltet hier, alles andere geht
+  // an Sitzung und Brett. Eine kurze Meldung sagt, was passiert ist.
+  const [toast, setToast] = useState<string | null>(null);
+  const live = useRef({ board, saveBoard });
+  live.current = { board, saveBoard };
+  useEffect(() => {
+    let hide = 0;
+    const off = listenDoubleTaps(
+      () => live.current.board,
+      (zone) => {
+        const { board: b, saveBoard: saveB } = live.current;
+        const id = commandAt(b, zone);
+        if (!id) return;
+        if (id === 'BLIND') {
+          saveB({ ...b, blind: !b.blind });
+          setToast(b.blind ? 'Blind aus' : 'Blind an');
+        } else {
+          sendCommand(id);
+          setToast(commandOf(id)?.short ?? null);
+        }
+        window.clearTimeout(hide);
+        hide = window.setTimeout(() => setToast(null), 1200);
+      },
+    );
+    return () => {
+      off();
+      window.clearTimeout(hide);
+    };
+  }, []);
+
   if (!ready) return <p className="muted pad">Starte …</p>;
 
-  switch (view.name) {
-    case 'home':
-      return (
-        <Home
-          key={rev}
-          onOpen={(slug, label) => setView({ name: 'opening', slug, label })}
-          onSettings={() => setView({ name: 'settings' })}
-        />
-      );
+  return (
+    <>
+      {screen()}
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
+    </>
+  );
 
-    case 'opening':
-      return (
-        <Opening
-          slug={view.slug}
-          name={view.label}
-          settings={settings}
-          onSettings={saveQuiet}
-          onBack={() => setView({ name: 'home' })}
-          onChanged={() => setRev((n) => n + 1)}
-          onStart={(filter) =>
-            setView({ name: 'session', slug: view.slug, label: view.label, filter })
-          }
-        />
-      );
+  function screen() {
+    switch (view.name) {
+      case 'home':
+        return (
+          <Home
+            key={rev}
+            onOpen={(slug, label) => setView({ name: 'opening', slug, label })}
+            onSettings={() => setView({ name: 'settings' })}
+          />
+        );
 
-    case 'session':
-      return (
-        <Session
-          slug={view.slug}
-          name={view.label}
-          filter={view.filter}
-          settings={settings}
-          board={board}
-          onBoard={saveBoard}
-          onBack={() => {
-            setRev((n) => n + 1);
-            setView({ name: 'opening', slug: view.slug, label: view.label });
-          }}
-        />
-      );
+      case 'opening':
+        return (
+          <Opening
+            slug={view.slug}
+            name={view.label}
+            settings={settings}
+            onSettings={saveQuiet}
+            onBack={() => setView({ name: 'home' })}
+            onChanged={() => setRev((n) => n + 1)}
+            onStart={(filter) =>
+              setView({ name: 'session', slug: view.slug, label: view.label, filter })
+            }
+          />
+        );
 
-    case 'settings':
-      return (
-        <Settings
-          settings={settings}
-          board={board}
-          onSave={save}
-          onBack={() => setView({ name: 'home' })}
-        />
-      );
+      case 'session':
+        return (
+          <Session
+            slug={view.slug}
+            name={view.label}
+            filter={view.filter}
+            settings={settings}
+            board={board}
+            onBoard={saveBoard}
+            onBack={() => {
+              setRev((n) => n + 1);
+              setView({ name: 'opening', slug: view.slug, label: view.label });
+            }}
+          />
+        );
+
+      case 'settings':
+        return (
+          <Settings
+            settings={settings}
+            board={board}
+            onSave={save}
+            onBack={() => setView({ name: 'home' })}
+          />
+        );
+    }
   }
 }

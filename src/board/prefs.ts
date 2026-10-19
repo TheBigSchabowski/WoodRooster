@@ -2,8 +2,10 @@
 // FSRS-Einstellungen unter einem eigenen Schluessel.
 
 import { DEFAULT_PENS, savePen } from './drawing';
+import { DEFAULT_TAP, type TapPrefs } from '../tapzones';
 
-export interface BoardPrefs {
+/** Liegt mitsamt den Doppeltipp-Kacheln unter einem Schluessel. */
+export interface BoardPrefs extends TapPrefs {
   /** Helle und dunkle Felder als "#RRGGBB". */
   light: string;
   dark: string;
@@ -31,4 +33,5 @@ export const DEFAULT_BOARD: BoardPrefs = {
   pens: DEFAULT_PENS.map(savePen),
   blind: false,
   blindSeconds: 120,
+  ...DEFAULT_TAP,
 };

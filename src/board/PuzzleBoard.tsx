@@ -4,6 +4,7 @@ import type { Api } from '@lichess-org/chessground/api';
 import type { Color, Key } from '@lichess-org/chessground/types';
 
 import { toggle, PENS, type Mark, type Pen, type PenColor } from './drawing';
+import { onCommand } from '../tapzones';
 
 import '@lichess-org/chessground/assets/chessground.base.css';
 import '@lichess-org/chessground/assets/chessground.brown.css';
@@ -261,6 +262,17 @@ export function PuzzleBoard(props: Props) {
     e.preventDefault();
     drawFrom(e.nativeEvent, true);
   }
+
+  // Doppeltippen auf die Kachel „Zeichnen“.
+  useEffect(
+    () =>
+      onCommand((id) => {
+        if (id !== 'DRAW' || live.current.collapsed) return;
+        setDrawMode((v) => !v);
+        api.current?.selectSquare(null);
+      }),
+    [],
+  );
 
   // Tasten: m schaltet den Zeichenmodus, darin ist jede Taste allein ein
   // Befehl (wie in FireHorse). Sie gehen vor die Tasten der Sitzung, deshalb in
