@@ -5,6 +5,7 @@ import { Session } from './screens/Session';
 import { Settings } from './screens/Settings';
 import { getSetting, setSetting, type BatchFilter } from './api/commands';
 import { DEFAULT_SETTINGS, type SrsSettings } from './srs/scheduler';
+import { BOARD_KEY, DEFAULT_BOARD, type BoardPrefs } from './board/prefs';
 
 type View =
   | { name: 'home' }
@@ -17,6 +18,7 @@ const SETTINGS_KEY = 'srs';
 export function App() {
   const [view, setView] = useState<View>({ name: 'home' });
   const [settings, setSettings] = useState<SrsSettings>(DEFAULT_SETTINGS);
+  const [board, setBoard] = useState<BoardPrefs>(DEFAULT_BOARD);
   const [ready, setReady] = useState(false);
   // Zwingt die Startseite zum Neuladen, wenn sich anderswo etwas geaendert hat.
   const [rev, setRev] = useState(0);
@@ -29,6 +31,12 @@ export function App() {
       } catch {
         /* Kaputte Einstellungen sollen den Start nicht verhindern. */
       }
+      try {
+        const raw = await getSetting(BOARD_KEY);
+        if (raw) setBoard({ ...DEFAULT_BOARD, ...JSON.parse(raw) });
+      } catch {
+        /* Dann eben das Standardbrett. */
+      }
       setReady(true);
     })();
   }, []);
@@ -39,12 +47,18 @@ export function App() {
     await setSetting(SETTINGS_KEY, JSON.stringify(s));
   }, []);
 
+  const saveBoard = useCallback(async (b: BoardPrefs) => {
+    setBoard(b);
+    await setSetting(BOARD_KEY, JSON.stringify(b));
+  }, []);
+
   const save = useCallback(
-    async (s: SrsSettings) => {
+    async (s: SrsSettings, b: BoardPrefs) => {
       await saveQuiet(s);
+      await saveBoard(b);
       setView({ name: 'home' });
     },
-    [saveQuiet],
+    [saveQuiet, saveBoard],
   );
 
   if (!ready) return <p className="muted pad">Starte …</p>;
@@ -81,6 +95,8 @@ export function App() {
           name={view.label}
           filter={view.filter}
           settings={settings}
+          board={board}
+          onBoard={saveBoard}
           onBack={() => {
             setRev((n) => n + 1);
             setView({ name: 'opening', slug: view.slug, label: view.label });
@@ -90,7 +106,12 @@ export function App() {
 
     case 'settings':
       return (
-        <Settings settings={settings} onSave={save} onBack={() => setView({ name: 'home' })} />
+        <Settings
+          settings={settings}
+          board={board}
+          onSave={save}
+          onBack={() => setView({ name: 'home' })}
+        />
       );
   }
 }

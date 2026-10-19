@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Schachtrainer",
-  "version": "0.1.4",
-  "identifier": "de.leidenschaftlicheslernen.schachtrainer",
+  "productName": "WoodRooster",
+  "version": "0.2.0",
+  "identifier": "de.leidenschaftlicheslernen.woodrooster",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Schachtrainer",
+        "title": "WoodRooster",
         "width": 1040,
         "height": 820,
         "minWidth": 380,

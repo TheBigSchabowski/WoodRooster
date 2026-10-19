@@ -307,3 +307,176 @@ input[type='range'] { padding: 0; accent-color: var(--accent); }
   margin-right: .25rem;
   background: var(--surface-2);
 }
+
+/* ---------- Brett: eigene Feldfarben, Zeichnen, Zuklappen ---------- */
+
+.board-frame { position: relative; width: 100%; }
+.board-frame.collapsed { display: none; }
+
+/* Schachbrettmuster aus zwei frei waehlbaren Farben statt Chessgrounds
+   Bild. Eine Kachel ist 2x2 Felder; oben links liegt immer ein helles Feld
+   (a8 von Weiss aus, h1 von Schwarz aus). */
+.board-frame cg-board {
+  background-color: var(--sq-light);
+  background-image: repeating-conic-gradient(var(--sq-dark) 0 25%, var(--sq-light) 0 50%);
+  background-size: 25% 25%;
+}
+
+/* Koordinaten in der Gegenfarbe ihres Feldes. Chessground vergibt
+   coord-light/-dark fuer Zahlen am rechten Rand; hier stehen sie links (siehe
+   oben), also auf der jeweils anderen Feldfarbe. */
+.board-frame .cg-wrap coords.files coord.coord-light,
+.board-frame .cg-wrap coords.ranks coord.coord-dark { color: var(--sq-dark); }
+.board-frame .cg-wrap coords.files coord.coord-dark,
+.board-frame .cg-wrap coords.ranks coord.coord-light { color: var(--sq-light); }
+
+/* Ausgefuellte Felder liegen als Feld-Klasse unter den Figuren. */
+.board-frame cg-board square.pen-field.pen-0 { background-color: var(--pen0-field); }
+.board-frame cg-board square.pen-field.pen-1 { background-color: var(--pen1-field); }
+.board-frame cg-board square.pen-field.pen-2 { background-color: var(--pen2-field); }
+.board-frame cg-board square.pen-field.pen-3 { background-color: var(--pen3-field); }
+.board-frame cg-board square.pen-field.pen-4 { background-color: var(--pen4-field); }
+.board-frame cg-board square.pen-field.pen-5 { background-color: var(--pen5-field); }
+
+.board-frame .marks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Im Zeichenmodus faengt eine Folie alle Beruehrungen ab; ein gruener Rahmen
+   zeigt den Modus an. */
+.board-frame .draw-catcher {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  touch-action: none;
+  cursor: crosshair;
+}
+.board-frame.drawing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(21, 120, 27, .8);
+  pointer-events: none;
+  z-index: 6;
+}
+
+.draw-bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: .15rem;
+  background: rgba(21, 21, 21, .88);
+  border-radius: 999px;
+  padding: .2rem .6rem;
+  color: #fff;
+  font-size: .85rem;
+  white-space: nowrap;
+}
+.draw-bar.top { top: 1.2%; }
+.draw-bar.bottom { bottom: 1.2%; padding: .3rem .5rem; gap: .3rem; }
+.draw-bar button.link { background: none; border: none; padding: .3rem .5rem; color: #b0b0b0; }
+.draw-bar button.link.done { color: #8bd18e; }
+.draw-bar button.link:hover { background: none; color: #fff; }
+
+.pen-dot, .pen-shape {
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.pen-dot { box-shadow: inset 0 0 0 2px rgba(21, 21, 21, .88); }
+.pen-dot.on, .pen-shape.on { border-color: #fff; }
+.pen-shape { border-radius: 5px; background: none; display: grid; place-items: center; }
+.pen-shape.first { margin-left: .5rem; }
+.pen-shape:hover:not(:disabled) { background: none; }
+.shape-circle { width: 70%; height: 70%; border: 2px solid; border-radius: 50%; }
+.shape-field { width: 70%; height: 70%; }
+
+/* Zugeklappt: ein Holzdeckel statt des Bretts. */
+.board-lid {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius);
+  border: 1px solid #5a3e22;
+  background: linear-gradient(135deg, #7a5432, #5c3d22);
+  color: #f3e3cb;
+  font-weight: 600;
+}
+.board-lid:hover:not(:disabled) { background: linear-gradient(135deg, #86603b, #684629); border-color: #6b4a2a; }
+.board-lid .muted { color: #e2c9a6; font-weight: 400; }
+
+kbd {
+  font: inherit;
+  font-size: .75em;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 .3rem;
+}
+
+.blind { display: grid; gap: .6rem; padding: .8rem; background: var(--surface); border-radius: var(--radius); }
+.blind-row { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.clock { font-variant-numeric: tabular-nums; color: var(--accent); margin-left: .3rem; }
+.moves { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9rem; margin: 0; }
+.move-input { display: flex; gap: .4rem; }
+.move-input input { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.topbar-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Einstellungen: Brett ---------- */
+
+.panel h2 { font-size: 1rem; margin-bottom: .75rem; }
+.panel > .chips { margin-bottom: .9rem; }
+.check { display: flex; align-items: center; gap: .5rem; margin-bottom: .9rem; }
+.check input { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; }
+
+.swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 2px; vertical-align: -1px; }
+.chip .swatch:nth-of-type(2) { margin-right: .35rem; }
+
+.colors { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: .6rem; }
+.color-rows { display: grid; gap: .5rem; flex: 1; min-width: 220px; }
+.color-row { display: flex; align-items: center; gap: .5rem; }
+.color-label { width: 7.5rem; font-size: .9rem; color: var(--muted); }
+.color-row input[type='color'] {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 2px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex: none;
+}
+.color-row .hex { width: 6.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.color-row .hex.invalid { border-color: var(--wrong); }
+
+.mini-board {
+  width: 96px;
+  height: 96px;
+  border-radius: 6px;
+  background-color: var(--sq-light);
+  background-image: repeating-conic-gradient(var(--sq-dark) 0 25%, var(--sq-light) 0 50%);
+  background-size: 50% 50%;
+  flex: none;
+}
+
+.pen-rows { display: grid; gap: .35rem; margin-bottom: .75rem; }
+.pen-row { display: flex; align-items: center; gap: .5rem; padding: .25rem .4rem; border-radius: 9px; border: 1px solid transparent; }
+.pen-row.on { border-color: var(--line); background: var(--surface-2); }
+.pen-num { width: 1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pen-name { flex: 1; min-width: 0; }
+
+.ink-palette { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .5rem; }
+.ink { width: 1.7rem; height: 1.7rem; padding: 0; border-radius: 50%; border: 2px solid var(--line); }
+.ink:hover:not(:disabled) { border-color: var(--text); }

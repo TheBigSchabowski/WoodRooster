@@ -15,14 +15,14 @@ cd "$(dirname "$0")/.."
 . tools/android-env.sh
 
 KEYDIR="$HOME/.android"
-KEYSTORE="$KEYDIR/schachtrainer-release.jks"
-PASSFILE="$KEYDIR/schachtrainer-release.pass"
-ALIAS="schachtrainer"
+KEYSTORE="$KEYDIR/woodrooster-release.jks"
+PASSFILE="$KEYDIR/woodrooster-release.pass"
+ALIAS="woodrooster"
 GRADLE="src-tauri/gen/android/app/build.gradle.kts"
 PROPS="src-tauri/gen/android/keystore.properties"
-MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/de/leidenschaftlicheslernen/schachtrainer/MainActivity.kt"
+MAIN_ACTIVITY="src-tauri/gen/android/app/src/main/java/de/leidenschaftlicheslernen/woodrooster/MainActivity.kt"
 MAIN_ACTIVITY_TEMPLATE="tools/android/MainActivity.kt"
-SIGNING_MARKER="SCHACHTRAINER_RELEASE_SIGNING"
+SIGNING_MARKER="WOODROOSTER_RELEASE_SIGNING"
 
 if [ ! -f "$GRADLE" ]; then
   echo "Kein Android-Projekt gefunden. Erst ausfuehren:" >&2
@@ -52,7 +52,7 @@ else
     -keyalg RSA -keysize 4096 -validity 10000 \
     -storepass "$(cat "$PASSFILE")" \
     -keypass "$(cat "$PASSFILE")" \
-    -dname "CN=Schachtrainer, OU=Privat, O=Privat, C=DE" >/dev/null
+    -dname "CN=WoodRooster, OU=Privat, O=Privat, C=DE" >/dev/null
   chmod 600 "$KEYSTORE"
 
   echo
@@ -101,7 +101,7 @@ s = io.open(path, encoding="utf-8").read()
 if 'import java.util.Properties' not in s:
     s = 'import java.util.Properties\n\n' + s
 
-loader = '''// SCHACHTRAINER_RELEASE_SIGNING
+loader = '''// WOODROOSTER_RELEASE_SIGNING
 // Signatur fuer das Release-APK, eingerichtet von tools/android-sign.sh.
 val keystoreProperties = Properties().apply {
     val f = rootProject.file("keystore.properties")

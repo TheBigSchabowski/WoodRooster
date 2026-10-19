@@ -5,6 +5,8 @@ import type { IPreview } from 'ts-fsrs';
 
 import { PuzzleBoard } from '../board/PuzzleBoard';
 import { PuzzleRunner } from '../board/solve';
+import { pensFrom } from '../board/drawing';
+import type { BoardPrefs } from '../board/prefs';
 import {
   fetchGame,
   nextBatch,
@@ -42,11 +44,14 @@ interface Props {
   name: string;
   filter: BatchFilter;
   settings: SrsSettings;
+  board: BoardPrefs;
+  onBoard: (b: BoardPrefs) => void;
   onBack: () => void;
 }
 
-export function Session({ slug, name, filter, settings, onBack }: Props) {
+export function Session({ slug, name, filter, settings, board, onBoard, onBack }: Props) {
   const scheduler = useMemo(() => makeScheduler(settings), [settings]);
+  const pens = useMemo(() => pensFrom(board.pens), [board.pens]);
   const [queue, setQueue] = useState<PuzzleDto[]>([]);
   const [pos, setPos] = useState(0);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -62,6 +67,14 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
   const [note, setNote] = useState<string | null>(null);
   // Gemerkte Puzzle dieser Sitzung; der Ausgangswert kommt aus dem Stapel.
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  // Blindmodus: das Brett ist anfangs offen und klappt nach board.blindSeconds
+  // zu. Danach laesst es sich zum Nachsehen auf- und wieder zuklappen.
+  const [boardOpen, setBoardOpen] = useState(true);
+  const [closesAt, setClosesAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [peeks, setPeeks] = useState(0);
+  const [typed, setTyped] = useState('');
+  const [typedError, setTypedError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
   const replyTimer = useRef<number | null>(null);
 
@@ -88,6 +101,63 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
   }, [slug, filter]);
 
   const current = queue[pos];
+
+  // Jedes Puzzle beginnt mit offenem Brett; blind laeuft dann die Uhr.
+  useEffect(() => {
+    setBoardOpen(true);
+    setPeeks(0);
+    setTyped('');
+    setTypedError(null);
+    setNow(Date.now());
+    setClosesAt(board.blind ? Date.now() + board.blindSeconds * 1000 : null);
+  }, [runner, board.blind, board.blindSeconds]);
+
+  useEffect(() => {
+    if (closesAt === null) return;
+    const id = window.setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= closesAt) {
+        setClosesAt(null);
+        setBoardOpen(false);
+      }
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [closesAt]);
+
+  // Geloest: das Brett geht auf, damit man die Schlussstellung sieht.
+  useEffect(() => {
+    if (phase !== 'solving') {
+      setClosesAt(null);
+      setBoardOpen(true);
+    }
+  }, [phase]);
+
+  /** Klappt das Brett zu oder auf; waehrend der Einpraegzeit klappt es sofort zu. */
+  function flipBoard() {
+    if (!board.blind || phase !== 'solving') return;
+    if (closesAt !== null || boardOpen) {
+      setClosesAt(null);
+      setBoardOpen(false);
+      return;
+    }
+    setPeeks((n) => n + 1);
+    setBoardOpen(true);
+  }
+
+  /** Ein getippter Zug, wie ein Zug auf dem Brett. */
+  function submitTyped() {
+    if (!runner || phase !== 'solving' || runner.turnColor !== runner.solverColor) return;
+    const move = runner.parseMove(typed);
+    if (!move) {
+      setTypedError(`„${typed.trim()}“ ist hier kein möglicher Zug.`);
+      return;
+    }
+    setTyped('');
+    setTypedError(null);
+    const role = move.role ?? (runner.needsPromotion(move.orig, move.dest) ? 'queen' : undefined);
+    applyMove(move.orig, move.dest, role);
+  }
 
   const finishPuzzle = useCallback(() => {
     setPhase('graded');
@@ -171,6 +241,14 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // Im Zugfeld landen Buchstaben im Feld, nicht bei den Kuerzeln.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        flipBoard();
+        return;
+      }
       if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
         flipFavorite();
@@ -269,6 +347,9 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
   if (!runner || !current) return null;
 
   const solverTurn = runner.turnColor === runner.solverColor;
+  const blindSolving = board.blind && phase === 'solving';
+  const secondsLeft = closesAt === null ? 0 : Math.max(0, Math.ceil((closesAt - now) / 1000));
+  const clock = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
   return (
     <div className="session">
@@ -279,11 +360,27 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
         <span className="progress">
           {pos + 1} / {queue.length}
         </span>
-        <span className="muted">{name}</span>
+        <span className="muted topbar-name">{name}</span>
+        <button
+          className={`chip ${board.blind ? 'on' : ''}`}
+          onClick={() => onBoard({ ...board, blind: !board.blind })}
+          title="Blindmodus: die Stellung ist nur am Anfang zu sehen"
+          aria-pressed={board.blind}
+        >
+          Blind
+        </button>
       </header>
 
       <div className="session-body">
         <div className="board-wrap">
+          {!boardOpen && (
+            <button className="board-lid" onClick={flipBoard}>
+              <span>Brett zugeklappt</span>
+              <span className="muted small">
+                aufklappen <kbd>B</kbd>
+              </span>
+            </button>
+          )}
           <PuzzleBoard
             fen={runner.fen}
             orientation={runner.solverColor}
@@ -295,6 +392,10 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
             hint={showSolution ? runner.hintSquare : undefined}
             revision={revision}
             onMove={handleMove}
+            light={board.light}
+            dark={board.dark}
+            pens={pens}
+            collapsed={!boardOpen}
           />
           {promotion && (
             <div className="promo">
@@ -336,6 +437,67 @@ export function Session({ slug, name, filter, settings, onBack }: Props) {
             </div>
             <span className="muted small">{current.name}</span>
           </div>
+
+          {blindSolving && (
+            <div className="blind">
+              {closesAt !== null ? (
+                <div className="blind-row">
+                  <span>
+                    Stellung einprägen <b className="clock">{clock}</b>
+                  </span>
+                  <button className="ghost" onClick={flipBoard}>
+                    Jetzt zuklappen <kbd>B</kbd>
+                  </button>
+                </div>
+              ) : (
+                <div className="blind-row">
+                  <span className="muted small">
+                    {peeks === 0 ? 'Blind' : `${peeks}× aufgeklappt`}
+                  </span>
+                  <button className="ghost" onClick={flipBoard}>
+                    {boardOpen ? 'Zuklappen' : 'Aufklappen'} <kbd>B</kbd>
+                  </button>
+                </div>
+              )}
+              <p className="moves">
+                {runner.history.map((san, i) => {
+                  const number = runner.moveNumber(i);
+                  return (
+                    <span key={i}>
+                      {(i === 0 || number.endsWith('.')) && <span className="muted">{number} </span>}
+                      {san}{' '}
+                    </span>
+                  );
+                })}
+              </p>
+              <form
+                className="move-input"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitTyped();
+                }}
+              >
+                <input
+                  value={typed}
+                  onChange={(e) => {
+                    setTyped(e.target.value);
+                    setTypedError(null);
+                  }}
+                  placeholder={solverTurn ? 'Zug, z. B. Sf3 oder Nf3' : 'Der Gegner zieht …'}
+                  disabled={!solverTurn}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Zug eingeben"
+                />
+                <button type="submit" disabled={!solverTurn || !typed.trim()}>
+                  Ziehen
+                </button>
+              </form>
+              {typedError && <p className="error small">{typedError}</p>}
+            </div>
+          )}
 
           {phase === 'solving' && (
             <>

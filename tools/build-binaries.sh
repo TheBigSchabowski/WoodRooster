@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 
 APP_VERSION="$(node -p "require('./package.json').version")"
 ANDROID_GRADLE="src-tauri/gen/android/app/build.gradle.kts"
-DMG="src-tauri/target/release/bundle/dmg/Schachtrainer_${APP_VERSION}_aarch64.dmg"
+DMG="src-tauri/target/release/bundle/dmg/WoodRooster_${APP_VERSION}_aarch64.dmg"
 APK="src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
 RELEASE_DIR="dist/releases"
 
@@ -53,13 +53,13 @@ done
 
 echo "==> Benenne Release-Artefakte..."
 mkdir -p "$RELEASE_DIR"
-cp "$DMG" "$RELEASE_DIR/Schachtrainer_${APP_VERSION}_macos-arm64.dmg"
-cp "$APK" "$RELEASE_DIR/Schachtrainer_${APP_VERSION}_android-arm64.apk"
+cp "$DMG" "$RELEASE_DIR/WoodRooster_${APP_VERSION}_macos-arm64.dmg"
+cp "$APK" "$RELEASE_DIR/WoodRooster_${APP_VERSION}_android-arm64.apk"
 (
   cd "$RELEASE_DIR"
   shasum -a 256 \
-    "Schachtrainer_${APP_VERSION}_macos-arm64.dmg" \
-    "Schachtrainer_${APP_VERSION}_android-arm64.apk" > SHA256SUMS.txt
+    "WoodRooster_${APP_VERSION}_macos-arm64.dmg" \
+    "WoodRooster_${APP_VERSION}_android-arm64.apk" > SHA256SUMS.txt
 )
 
 echo "==> Builds erfolgreich abgeschlossen!"

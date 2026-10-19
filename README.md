@@ -1,4 +1,4 @@
-# Schachtrainer
+# WoodRooster
 
 Chess puzzles grouped by opening, drilled with spaced repetition. Native desktop
 app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
@@ -13,13 +13,18 @@ app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
 > keypress. All 1.2 million opening-tagged Lichess puzzles are **bundled
 > offline** in a 39 MB pack, so adding a new opening works on a plane.
 >
+> **New in WoodRooster (formerly Schachtrainer):** a **blind mode** (the position
+> is shown for two minutes, then the board folds shut and you type your moves),
+> board squares in **any hex colour**, and the **drawing mode** from FireHorse
+> (arrows, circles and filled squares in six freely coloured pens).
+>
 > **Privacy.** All learning progress lives in a local SQLite file and is never
 > sent anywhere. The app touches the network only when you tap "view game" on a
 > solved puzzle.
 >
-> **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/schachtrainer/releases/latest):
-> - [Android APK (arm64)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_android-arm64.apk)
-> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_macos-arm64.dmg)
+> **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/WoodRooster/releases/latest):
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_macos-arm64.dmg)
 >
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
@@ -33,16 +38,47 @@ Puzzle „Partie ansehen“ antippt.
 
 Dank, Lizenz und die Rolle der KI-Beteiligung: **[CREDITS.md](CREDITS.md)**.
 
+WoodRooster hieß bis Version 0.1.4 **Schachtrainer**. Auf dem Mac übernimmt die
+App beim ersten Start den Lernstand des alten Schachtrainers (er wird kopiert,
+das Original bleibt liegen). Auf Android ist WoodRooster eine eigene App neben
+dem alten Schachtrainer; dort beginnt der Lernstand neu.
+
+## Neu in WoodRooster
+
+- **Blindmodus:** Die Stellung ist am Anfang jedes Puzzles zu sehen (Standard
+  2 Minuten, einstellbar von 10 Sekunden bis 10 Minuten), dann klappt das Brett
+  zu. Gezogen wird im Zugfeld darunter — englisch oder deutsch (`Nf3`/`Sf3`,
+  `Qxd5`/`Dxd5`, `0-0`, `e8=D`) oder als UCI (`g1f3`). Ein Tippfehler zählt
+  nicht als Fehlversuch. Die bisherigen Züge stehen als Liste daneben. `B` (oder
+  der Holzdeckel) klappt das Brett zum Nachsehen auf und wieder zu; während der
+  Einprägezeit klappt `B` sofort zu. Nach dem Lösen geht das Brett von selbst
+  auf. Ein- und ausschalten: „Blind“ oben in der Sitzung oder in den
+  Einstellungen.
+- **Brettfarben per Hexcode:** helle und dunkle Felder frei wählbar
+  (Einstellungen → Brettfarben), über den Farbwähler, als `#E6C99B` oder kurz
+  `#ec9`, dazu fünf Vorlagen (Braun, Holz, Blau, Grün, Grau). Die Koordinaten
+  nehmen jeweils die Gegenfarbe ihres Feldes an.
+- **Zeichenmodus (aus FireHorse):** dreimal schnell aufs Brett tippen oder `M`.
+  Ein grüner Rahmen zeigt den Modus an; Antippen kreist ein Feld ein (nochmal
+  tippen nimmt es weg), Ziehen malt einen Pfeil, Züge sind gesperrt. Unten auf
+  dem Brett liegen sechs Stifte und die Wahl zwischen Kreis und ausgefülltem
+  Feld, oben „Löschen“ und „Fertig“. Mit der Maus zeichnet die rechte Taste auch
+  ohne Modus; Shift, Alt oder beide nehmen Stift 2, 3 oder 4 wie auf lichess.
+  Gezeichnetes gehört zur Stellung: der nächste Zug oder ein normaler Klick
+  wischt es weg, gespeichert wird nichts. Die Farbe jedes Stifts ist frei
+  wählbar (Einstellungen → Zeichenstifte): aus 16 Farben oder als eigener Code
+  mit Namen, z. B. `#7FFFD4` „Aquamarin“.
+
 ## Download (Fertige Apps)
 
 Fertig gebaute Installationsdateien können direkt heruntergeladen werden — kein Terminal, kein Termux und kein manuelles Kompilieren nötig:
 
 | Plattform | Download | Details |
 |---|---|---|
-| **Android** | [`.apk` herunterladen (v0.1.4)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
-| **macOS** | [`.dmg` herunterladen (v0.1.4)](https://github.com/TheBigSchabowski/schachtrainer/releases/latest/download/Schachtrainer_0.1.4_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Android** | [`.apk` herunterladen (v0.2.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.2.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
 
-Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/schachtrainer/releases)**.
+Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/WoodRooster/releases)**.
 
 **Hinweise zur Installation:**
 - **Android:** Das APK im Browser auf dem Smartphone herunterladen und öffnen. Bei der Abfrage „Aus dieser Quelle installieren“ bzw. unbekannte Quellen die Erlaubnis für den Browser oder Dateimanager erteilen.
@@ -68,7 +104,7 @@ npm run android                 # erzeugt das .apk für arm64
 
 Android installiert nur signierte APKs, deshalb der Schritt mit
 `android-sign.sh`. Das Skript legt einen selbst erzeugten Schlüssel unter
-`~/.android/schachtrainer-release.jks` ab (bewusst außerhalb des Projekts) und
+`~/.android/woodrooster-release.jks` ab (bewusst außerhalb des Projekts) und
 trägt ihn in die Gradle-Konfiguration ein. Es ist wiederholbar — nach einem
 erneuten `android init` einfach nochmal laufen lassen.
 
@@ -102,6 +138,13 @@ Das Skript baut DMG und APK, benennt sie für die Releases um und erzeugt
 | `1`–`4` | dasselbe in Knopfreihenfolge (Nochmal … Einfach) |
 | Leertaste | Gut |
 | `F` | Puzzle merken, geht auch während des Lösens |
+| `B` | Blindmodus: Brett auf- und zuklappen |
+| `M` | Zeichenmodus an/aus |
+
+Im Zeichenmodus ist jede Taste allein ein Befehl und geht vor die Tasten oben:
+`1`–`6` Stift, `←` `→` Stift wechseln, `O` (oder `↑` `↓`) Kreis/Feld, `X` alles
+wegwischen, `U` oder `Esc` Zeichnen beenden. Steht der Cursor im Zugfeld, landen
+alle Buchstaben dort.
 
 Die Belegung ist auf die **deutsche QWERTZ-Tastatur** gemünzt: dort liegen
 Y X C V nebeneinander unten links. Ausgewertet wird `KeyboardEvent.key`, also
@@ -156,7 +199,7 @@ das Plus-Feld auch ohne Internet.
 Erzeugt wird der Pack aus der offiziellen Datenbank (CC0):
 
 ```sh
-curl -L -o ~/Library/Caches/schachtrainer/lichess_db_puzzle.csv.zst \
+curl -L -o ~/Library/Caches/woodrooster/lichess_db_puzzle.csv.zst \
   https://database.lichess.org/lichess_db_puzzle.csv.zst
 npm run build-pack
 ```
@@ -195,9 +238,13 @@ tools/build-pack.mjs      erzeugt openings.pack + openings.json
 tools/make-emoji-icon.m   rendert ein Emoji als Icon-Quelle (siehe unten)
 tools/make-icon.mjs       zeichnet stattdessen ein Schachbrett-Icon
 tools/test-solve.mjs      spielt echte Puzzle durch, prüft die Abspiel-Logik
+tools/test-blind.mjs      tippt echte Lösungen blind ein, prüft das Zeichnen
 tools/android-env.sh      Umgebungsvariablen für den Android-Build
 
-src/board/solve.ts        Abspiel-Logik eines Puzzles
+src/board/solve.ts        Abspiel-Logik eines Puzzles, getippte Züge, Zugliste
+src/board/PuzzleBoard.tsx Brett (chessground), Zeichenmodus, eigene Feldfarben
+src/board/drawing.ts      Pfeile, Kreise, Felder und Stifte (wie FireHorse)
+src/board/prefs.ts        Brettfarben, Stifte, Blindmodus (Schlüssel „board“)
 src/srs/scheduler.ts      FSRS-Anbindung, Intervalle für die Bewertungsknöpfe
 src/screens/              Start, Eröffnung, Sitzung, Einstellungen
 
@@ -220,12 +267,15 @@ Löser am Zug. `tools/test-solve.mjs` prüft das gegen 2.052 echte Puzzle.
 npm test
 ```
 
-Das führt drei Dinge aus:
+Das führt vier Dinge aus:
 
 - `tsc --noEmit` — Typprüfung
 - `tools/test-solve.mjs` — spielt 2.052 echte Puzzle aus vier Eröffnungsfamilien
   komplett durch und prüft zusätzlich an 608 Stellen, dass ein falscher Zug auch
   wirklich abgelehnt wird
+- `tools/test-blind.mjs` — tippt die Lösungen von gut 800 Puzzlen abwechselnd
+  englisch, deutsch und in UCI ein (inklusive Rochade und Umwandlung) und prüft
+  die Zugliste, dazu das Zeichnen und das Lesen der Stiftfarben
 - `cargo test --lib` — die SQL-Abfragen laufen gegen eine SQLite-Datenbank im
   Speicher, jeder Sitzungsmodus einzeln
 
@@ -237,7 +287,7 @@ Sitzung“ zur Laufzeit mit `Invalid parameter name: :now` scheitern, während
 
 ## Icon wechseln
 
-Das App-Icon ist das 🔨-Emoji auf dunklem Grund. Zum Wechseln genügt ein anderes
+Das App-Icon ist das 🐓-Emoji auf dunklem Grund. Zum Wechseln genügt ein anderes
 Emoji:
 
 ```sh

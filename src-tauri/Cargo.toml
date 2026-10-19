@@ -1,12 +1,12 @@
 [package]
-name = "schachtrainer"
-version = "0.1.4"
+name = "woodrooster"
+version = "0.2.0"
 description = "Schachpuzzle mit Spaced Repetition"
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "schachtrainer_lib"
+name = "woodrooster_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

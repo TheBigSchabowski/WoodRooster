@@ -101,7 +101,7 @@ export function Home({ onOpen, onSettings }: Props) {
   return (
     <div className="screen">
       <header className="topbar">
-        <h1>Schachtrainer</h1>
+        <h1>WoodRooster</h1>
         <button className="ghost" onClick={onSettings}>
           Einstellungen
         </button>

@@ -760,7 +760,7 @@ pub async fn fetch_game(puzzle_id: String) -> Result<GameInfo, String> {
     let url = format!("https://lichess.org/api/puzzle/{puzzle_id}");
     let res = reqwest::Client::new()
         .get(&url)
-        .header("User-Agent", "Schachtrainer/0.1 (privat)")
+        .header("User-Agent", "WoodRooster/0.1 (privat)")
         .send()
         .await
         .map_err(|e| format!("Lichess nicht erreichbar: {e}"))?;

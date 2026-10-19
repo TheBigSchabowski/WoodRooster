@@ -20,7 +20,7 @@ const compress = promisify(zstdCompress);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = process.argv[2]
-  ?? join(homedir(), 'Library/Caches/schachtrainer/lichess_db_puzzle.csv.zst');
+  ?? join(homedir(), 'Library/Caches/woodrooster/lichess_db_puzzle.csv.zst');
 const OUT_DIR = join(ROOT, 'src-tauri/resources');
 const PACK = join(OUT_DIR, 'openings.pack');
 const CATALOG = join(OUT_DIR, 'openings.json');

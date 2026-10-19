@@ -5,11 +5,12 @@
 // wechseln sich Loesungszug und Gegenzug ab; der letzte Zug ist immer der des
 // Loesers.
 
-import { Chess } from 'chessops/chess';
+import { Chess, castlingSide } from 'chessops/chess';
 import { parseFen, makeFen } from 'chessops/fen';
 import { parseUci, makeUci } from 'chessops/util';
 import { chessgroundDests } from 'chessops/compat';
-import { makeSan } from 'chessops/san';
+import { makeSan, parseSan } from 'chessops/san';
+import { makeSquare } from 'chessops/util';
 import type { Color, Role, SquareName } from 'chessops/types';
 import type { PuzzleDto } from '../api/commands';
 
@@ -38,6 +39,8 @@ export class PuzzleRunner {
   readonly solverColor: Color;
 
   lastMove?: [SquareName, SquareName];
+  /** Alle Zuege seit der Ausgangsstellung in Standardnotation, auch der erste des Gegners. */
+  readonly history: string[] = [];
   wrongAttempts = 0;
   usedHint = false;
   finished = false;
@@ -51,6 +54,7 @@ export class PuzzleRunner {
 
     const opening = parseUci(this.moves[0]);
     if (opening) {
+      this.history.push(makeSan(this.pos, opening));
       this.pos.play(opening);
       this.lastMove = squares(this.moves[0]);
     }
@@ -109,12 +113,14 @@ export class PuzzleRunner {
         this.wrongAttempts++;
         return { outcome: 'wrong' };
       }
+      this.history.push(makeSan(this.pos, move));
       this.pos = probe;
       this.lastMove = [orig, dest];
       this.finished = true;
       return { outcome: 'solved' };
     }
 
+    this.history.push(makeSan(this.pos, move));
     this.pos.play(move);
     this.lastMove = [orig, dest];
     this.idx++;
@@ -131,6 +137,7 @@ export class PuzzleRunner {
     const uci = this.moves[this.idx];
     const move = uci ? parseUci(uci) : undefined;
     if (move) {
+      this.history.push(makeSan(this.pos, move));
       this.pos.play(move);
       this.lastMove = squares(uci);
     }
@@ -149,6 +156,39 @@ export class PuzzleRunner {
       probe.play(move);
     }
     return out;
+  }
+
+  /** Die Zugnummer, mit der `history[i]` in der Partie steht: "12." oder "12…". */
+  moveNumber(i: number): string {
+    const setup = parseFen(this.puzzle.fen).unwrap();
+    const ply = (setup.fullmoves - 1) * 2 + (setup.turn === 'white' ? 0 : 1) + i;
+    return `${Math.floor(ply / 2) + 1}${ply % 2 === 0 ? '.' : '…'}`;
+  }
+
+  /**
+   * Ein getippter Zug fuer das zugeklappte Brett: Standardnotation mit
+   * englischen oder deutschen Figuren ("Nf3", "Sf3", "exd5", "0-0", "e8=D")
+   * oder UCI ("g1f3"). Gibt undefined zurueck, wenn er hier nicht gespielt
+   * werden kann - das ist ein Tippfehler und zaehlt nicht als Fehlversuch.
+   */
+  parseMove(text: string): { orig: SquareName; dest: SquareName; role?: Role } | undefined {
+    const t = text.trim().replace(/[!?]+$/, '').replace(/0/g, 'O');
+    if (!t) return undefined;
+    const uci = parseUci(t.toLowerCase());
+    if (uci && 'from' in uci && this.pos.isLegal(uci)) {
+      return { orig: makeSquare(uci.from), dest: makeSquare(uci.to), role: uci.promotion };
+    }
+    // Deutsche Figuren: Dame, Turm, Laeufer, Springer. Nur Grossbuchstaben,
+    // damit die Linie b nicht zum Laeufer wird.
+    const english = t.replace(/[DTLS]/g, (c) => ({ D: 'Q', T: 'R', L: 'B', S: 'N' })[c] ?? c);
+    const move = parseSan(this.pos, english);
+    if (!move || !('from' in move)) return undefined;
+    const orig = makeSquare(move.from);
+    // chessops fuehrt die Rochade als "Koenig schlaegt Turm" (e1h1), die
+    // Puzzle und das Brett als e1g1.
+    const side = castlingSide(this.pos, move);
+    const dest = side ? (`${side === 'h' ? 'g' : 'c'}${orig[1]}` as SquareName) : makeSquare(move.to);
+    return { orig, dest, role: move.promotion };
   }
 
   /** Spielt den gesuchten Zug selbst - nach "Loesung zeigen". */

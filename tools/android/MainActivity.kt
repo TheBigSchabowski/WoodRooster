@@ -1,4 +1,4 @@
-package de.leidenschaftlicheslernen.schachtrainer
+package de.leidenschaftlicheslernen.woodrooster
 
 import android.os.Bundle
 import android.util.Log
@@ -8,7 +8,7 @@ import java.io.FileOutputStream
 
 class MainActivity : TauriActivity() {
   companion object {
-    private const val TAG = "Schachtrainer"
+    private const val TAG = "WoodRooster"
     private val RESOURCE_FILES = listOf("openings.json", "openings.pack")
   }
 
@@ -49,7 +49,7 @@ class MainActivity : TauriActivity() {
       Log.i(TAG, "Resource extraction completed")
     } catch (e: Exception) {
       Log.e(TAG, "Could not extract bundled resources", e)
-      throw IllegalStateException("Schachtrainer resources are missing", e)
+      throw IllegalStateException("WoodRooster resources are missing", e)
     }
   }
 
