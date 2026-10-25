@@ -8,6 +8,7 @@ import { PuzzleRunner } from '../board/solve';
 import { pensFrom } from '../board/drawing';
 import type { BoardPrefs } from '../board/prefs';
 import { onCommand } from '../tapzones';
+import { Study } from './Study';
 import {
   fetchGame,
   nextBatch,
@@ -76,6 +77,8 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
   const [peeks, setPeeks] = useState(0);
   const [typed, setTyped] = useState('');
   const [typedError, setTypedError] = useState<string | null>(null);
+  // Variantenbaum des gerade geloesten Puzzles; die Sitzung bleibt darunter stehen.
+  const [studying, setStudying] = useState(false);
   const startedAt = useRef(Date.now());
   const replyTimer = useRef<number | null>(null);
 
@@ -254,6 +257,7 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
     setShowSolution(false);
     setGame(null);
     setPromotion(null);
+    setStudying(false);
     if (next >= queue.length) {
       setPhase('finished');
       return;
@@ -272,6 +276,7 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
       // Im Zugfeld landen Buchstaben im Feld, nicht bei den Kuerzeln.
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (studying) return;
       if (e.key === 'b' || e.key === 'B') {
         e.preventDefault();
         flipBoard();
@@ -283,6 +288,12 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
         return;
       }
       if (phase !== 'graded') return;
+      // Den Variantenbaum gibt es nur fuer gemerkte Puzzle.
+      if ((e.key === 'a' || e.key === 'A') && current && favorites.has(current.id)) {
+        e.preventDefault();
+        setStudying(true);
+        return;
+      }
       if (e.key === ' ') {
         e.preventDefault();
         grade(3); // Leertaste = Gut, wie in Anki
@@ -373,6 +384,10 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
   }
 
   if (!runner || !current) return null;
+
+  if (studying) {
+    return <Study puzzle={current} board={board} onBack={() => setStudying(false)} />;
+  }
 
   const solverTurn = runner.turnColor === runner.solverColor;
   const blindSolving = board.blind && phase === 'solving';
@@ -577,6 +592,11 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
               </div>
 
               <div className="actions">
+                {favorites.has(current.id) && (
+                  <button className="ghost" onClick={() => setStudying(true)} title="Varianten ausprobieren und speichern (a)">
+                    Variantenbaum <kbd>A</kbd>
+                  </button>
+                )}
                 <button className="ghost" onClick={loadGame}>
                   Partie ansehen
                 </button>

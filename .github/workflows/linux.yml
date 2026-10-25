@@ -1,0 +1,79 @@
+# Baut WoodRooster fuer Linux (x86_64) als AppImage und .deb.
+#
+# Auf dem Mac geht das nicht: Tauri braucht unter Linux WebKitGTK, und das
+# laesst sich nicht vom Mac aus querbauen. Darum hier auf einem Ubuntu-Runner.
+#
+# Der Puzzle-Pack ist nicht eingecheckt (siehe .gitignore); er wird hier wie
+# lokal aus der offiziellen Lichess-Datenbank (CC0) erzeugt.
+#
+# Start: Actions -> "Linux" -> "Run workflow", mit dem Release-Tag (z. B.
+# v0.3.0), an das AppImage und .deb gehaengt werden sollen.
+
+name: Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release-Tag, an das die Dateien gehaengt werden (leer = nur als Artefakt)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # 22.04 statt latest: ein AppImage laeuft nur auf Systemen mit mindestens
+    # so neuer glibc wie die, auf der es gebaut wurde.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Systempakete
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
+            patchelf zstd build-essential libssl-dev file
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Abhaengigkeiten
+        run: npm install
+
+      - name: Puzzle-Pack erzeugen
+        run: |
+          curl -fL -o lichess_db_puzzle.csv.zst https://database.lichess.org/lichess_db_puzzle.csv.zst
+          node --max-old-space-size=8192 tools/build-pack.mjs lichess_db_puzzle.csv.zst
+          rm lichess_db_puzzle.csv.zst
+
+      - name: Bauen
+        run: npx tauri build --bundles appimage,deb
+
+      - name: Umbenennen
+        id: files
+        run: |
+          V="$(node -p "require('./package.json').version")"
+          mkdir -p out
+          cp src-tauri/target/release/bundle/appimage/*.AppImage "out/WoodRooster_${V}_linux-x86_64.AppImage"
+          cp src-tauri/target/release/bundle/deb/*.deb "out/WoodRooster_${V}_linux-amd64.deb"
+          (cd out && sha256sum * > SHA256SUMS-linux.txt && cat SHA256SUMS-linux.txt)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: woodrooster-linux
+          path: out/*
+
+      - name: An das Release haengen
+        if: ${{ inputs.tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.tag }}" out/* --clobber

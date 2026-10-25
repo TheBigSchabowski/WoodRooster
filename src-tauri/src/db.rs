@@ -75,6 +75,15 @@ pub fn init(conn: &Connection) -> rusqlite::Result<()> {
         );
         CREATE INDEX IF NOT EXISTS favorite_by_date ON favorite(added_at DESC);
 
+        -- Variantenbaum eines Puzzles als JSON (Aufbau in src/board/study.ts).
+        -- Wie `favorite` eine eigene Tabelle, damit er das Entfernen der
+        -- Eroeffnung uebersteht - und auch das Aufheben der Merkung.
+        CREATE TABLE IF NOT EXISTS study (
+            puzzle_id  TEXT PRIMARY KEY REFERENCES puzzle(id) ON DELETE CASCADE,
+            tree       TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS setting (
             key   TEXT PRIMARY KEY,
             value TEXT NOT NULL

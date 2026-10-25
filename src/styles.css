@@ -1,16 +1,21 @@
 :root {
-  --bg: #14181f;
-  --surface: #1c222c;
-  --surface-2: #232b37;
-  --line: #2f3947;
-  --text: #e6eaf0;
-  --muted: #8c99ab;
-  --accent: #f5a524;
-  --due: #6aa9ff;
-  --new: #7bc86c;
-  --wrong: #e2564f;
-  --fav: #e85c7e;
-  --radius: 12px;
+  /* Dunkles Holz mit Bernstein: das "Wood" im Namen. */
+  --bg: #120f0c;
+  --surface: #1d1814;
+  --surface-2: #29221c;
+  --line: #3a3028;
+  --text: #f2eae0;
+  --muted: #a39686;
+  --accent: #f2a93b;
+  --accent-2: #e2673a;
+  --on-accent: #1d1206;
+  --due: #72b4ff;
+  --new: #8cd27b;
+  --wrong: #ec5f55;
+  --fav: #ef6a8a;
+  --radius: 14px;
+  --shadow: 0 1px 0 rgba(255, 235, 210, .04) inset, 0 8px 24px -12px rgba(0, 0, 0, .7);
+  --glow: 0 0 0 1px rgba(242, 169, 59, .35), 0 10px 30px -10px rgba(242, 169, 59, .35);
 
   color-scheme: dark;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -23,14 +28,18 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(226, 103, 58, .10), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(242, 169, 59, .08), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
 #root { min-height: 100vh; }
 
-h1 { font-size: 1.15rem; font-weight: 600; margin: 0; }
+h1 { font-size: 1.15rem; font-weight: 650; letter-spacing: -.01em; margin: 0; }
 h2 { font-size: 1.3rem; margin: 0 0 .5rem; }
 p { margin: 0 0 .75rem; line-height: 1.5; }
 
@@ -62,50 +71,63 @@ p { margin: 0 0 .75rem; line-height: 1.5; }
 button {
   font: inherit;
   color: var(--text);
-  background: var(--surface-2);
+  background: linear-gradient(180deg, #332a22, var(--surface-2));
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   padding: .5rem .9rem;
   cursor: pointer;
-  transition: background .12s, border-color .12s;
+  transition: background .15s, border-color .15s, transform .15s, box-shadow .15s, color .15s;
 }
-button:hover:not(:disabled) { background: #2b3543; border-color: #3d4a5c; }
+button:hover:not(:disabled) { background: linear-gradient(180deg, #3d3229, #30271f); border-color: #54453a; }
+button:active:not(:disabled) { transform: translateY(1px); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: .4; cursor: default; }
-button.ghost { background: transparent; }
+button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+button.ghost:hover:not(:disabled) { color: var(--text); }
 button.ghost:hover:not(:disabled) { background: var(--surface-2); }
 
-input, select {
+input, select, textarea {
   font: inherit;
   color: var(--text);
-  background: var(--surface);
+  background: rgba(0, 0, 0, .25);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   padding: .5rem .7rem;
 }
-input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 input[type='range'] { padding: 0; accent-color: var(--accent); }
 
 /* ---------- Startseite ---------- */
 
-.tiles { display: grid; gap: .75rem; margin-bottom: 2rem; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: .75rem; margin-bottom: 2rem; }
 
 .tile {
+  position: relative;
   display: grid;
-  gap: .4rem;
+  gap: .45rem;
   text-align: left;
-  padding: 1rem;
-  background: var(--surface);
+  padding: 1.05rem 1.1rem;
+  background: linear-gradient(160deg, #262019, var(--surface) 70%);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
-.tile-name { font-size: 1.05rem; font-weight: 600; }
+.tile:hover:not(:disabled) {
+  background: linear-gradient(160deg, #2e261e, #211b16 70%);
+  border-color: rgba(242, 169, 59, .45);
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+.tile-name { font-size: 1.05rem; font-weight: 650; letter-spacing: -.01em; }
 .tile-counts { font-size: .9rem; display: flex; gap: .4rem; align-items: baseline; }
 .tile-total { font-size: .8rem; }
 .due { color: var(--due); }
 .new { color: var(--new); }
 .dot { color: var(--muted); }
 
-.bar { display: block; height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
-.bar-fill { display: block; height: 100%; background: var(--accent); }
+.bar { display: block; height: 5px; background: rgba(0, 0, 0, .35); border-radius: 999px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-2), var(--accent)); box-shadow: 0 0 10px rgba(242, 169, 59, .5); }
 
 .adder { display: grid; gap: .6rem; }
 .adder > label { font-size: .9rem; color: var(--muted); }
@@ -136,16 +158,26 @@ input[type='range'] { padding: 0; accent-color: var(--accent); }
   gap: .5rem;
   margin-bottom: 1.25rem;
 }
-.stat { background: var(--surface); border-radius: 9px; padding: .7rem; display: grid; gap: .1rem; }
-.stat-value { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: .75rem; display: grid; gap: .1rem; box-shadow: var(--shadow); }
+.stat-value { font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .stat-label { font-size: .78rem; color: var(--muted); }
 
 .modes { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1.5rem; }
-.mode { display: grid; gap: .25rem; padding: 1.1rem; background: var(--surface); }
-.mode b { font-size: 1.05rem; }
+.mode {
+  display: grid;
+  gap: .25rem;
+  padding: 1.15rem 1.2rem;
+  text-align: left;
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, #3a2a1a, #241c15 75%);
+  border-color: rgba(242, 169, 59, .3);
+  box-shadow: var(--shadow);
+}
+.mode:hover:not(:disabled) { background: linear-gradient(160deg, #46321e, #2a2018 75%); box-shadow: var(--glow); transform: translateY(-2px); }
+.mode b { font-size: 1.1rem; color: var(--accent); }
 .mode span { font-size: .85rem; color: var(--muted); }
 
-.panel { background: var(--surface); border-radius: var(--radius); padding: 1rem; margin-bottom: .75rem; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin-bottom: .75rem; box-shadow: var(--shadow); }
 .panel summary { cursor: pointer; font-weight: 600; }
 .panel[open] summary { margin-bottom: .75rem; }
 .panel.hint { border-left: 3px solid var(--accent); }
@@ -290,9 +322,10 @@ input[type='range'] { padding: 0; accent-color: var(--accent); }
   background: var(--surface);
 }
 .chip.on {
-  background: var(--accent);
+  background: linear-gradient(180deg, #f7b955, var(--accent));
   border-color: var(--accent);
-  color: #1b1408;
+  color: var(--on-accent);
+  box-shadow: 0 0 14px -2px rgba(242, 169, 59, .55);
   font-weight: 600;
 }
 .chip.on .muted { color: #1b140899; }
@@ -522,3 +555,133 @@ html { touch-action: manipulation; }
   font-weight: 600;
   pointer-events: none;
 }
+
+/* ---------- Variantenbaum ---------- */
+
+.study-nav { display: flex; justify-content: center; gap: .35rem; margin-top: .6rem; }
+.study-nav button { min-width: 3rem; font-size: 1rem; }
+
+.study-tree {
+  padding: .8rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  line-height: 1.9;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.study-tree .mv {
+  font: inherit;
+  padding: .05rem .3rem;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+}
+.study-tree .mv.sol { font-weight: 700; }
+.study-tree .mv.root { color: var(--muted); }
+.study-tree .mv:hover { background: var(--surface-2); }
+.study-tree .mv.on { background: var(--accent); color: #1b1408; }
+.study-tree .var { color: var(--muted); }
+.study-tree .var .mv:not(.on) { color: var(--muted); }
+.study-tree .cmt { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-style: italic; color: var(--new); }
+
+.study-node { display: grid; gap: .5rem; }
+.study-node textarea { width: 100%; resize: vertical; font: inherit; }
+.badge { justify-self: start; font-size: .78rem; font-weight: 600; padding: .1rem .55rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.badge.sol { background: var(--accent); color: #1b1408; }
+.badge.own { background: var(--due); color: #0b1422; }
+
+.favlist-open {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+.favlist-open:hover:not(:disabled) { background: none; color: var(--accent); }
+.tree-mark { font-size: .75rem; color: var(--due); }
+
+/* ---------- Feinschliff ---------- */
+
+/* Marke auf der Startseite. */
+.brand { display: flex; align-items: center; gap: .55rem; font-size: 1.35rem; font-weight: 800; letter-spacing: -.03em; }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  font-size: 1.35rem;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #5a3a20, #2b1d12);
+  border: 1px solid #6e4a2a;
+  box-shadow: 0 6px 18px -6px rgba(226, 103, 58, .55);
+}
+.brand-word {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Bildschirme blenden sanft ein. */
+.screen, .session { animation: rise .28s ease-out both; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen, .session { animation: none; }
+  .tile:hover:not(:disabled), .mode:hover:not(:disabled) { transform: none; }
+}
+
+/* Das Brett liegt in einem Holzrahmen. Als border, nicht als padding: die
+   Zeichnungen und die Zeichenfolie liegen mit inset: 0 darueber und richten
+   sich nach der Innenkante - mit padding saessen die Pfeile daneben. */
+.board-frame:not(.collapsed) {
+  border: clamp(5px, 1.1vw, 10px) solid #4b311c;
+  border-radius: 10px;
+  background: #4b311c;
+  box-shadow:
+    0 1px 0 rgba(255, 220, 180, .18) inset,
+    0 20px 50px -18px rgba(0, 0, 0, .85),
+    0 0 0 1px #2a1b0f;
+}
+.board-frame .board-host cg-container { border-radius: 3px; overflow: hidden; }
+
+/* Seitenleiste der Sitzung als Karte. */
+.session .side > .puzzle-meta,
+.session .side > .grading {
+  padding: .9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.rating { font-size: 1.05rem; }
+.verdict { font-size: 1.02rem; }
+.verdict.correct { text-shadow: 0 0 18px rgba(140, 210, 123, .35); }
+
+/* Bewertungsknoepfe mit Farbe je Stufe, wie die Ampel in Anki. */
+.grade { border-radius: 12px; border-top: 3px solid var(--line); }
+.grade.g1 { border-top-color: var(--wrong); }
+.grade.g2 { border-top-color: #e0a04a; }
+.grade.g3 { border-top-color: var(--new); }
+.grade.g4 { border-top-color: var(--due); }
+.grade:hover:not(:disabled) { transform: translateY(-2px); }
+
+.heart.on { text-shadow: 0 0 14px rgba(239, 106, 138, .55); }
+.favtile { border-left: 3px solid var(--fav); background: linear-gradient(160deg, #2c1c20, var(--surface) 70%); }
+
+.topbar { padding-bottom: .75rem; border-bottom: 1px solid rgba(58, 48, 40, .6); }
+
+.study-tree, .blind { border: 1px solid var(--line); box-shadow: var(--shadow); }
+.study-tree .mv.on { background: linear-gradient(180deg, #f7b955, var(--accent)); color: var(--on-accent); }
+.badge.sol { background: var(--accent); color: var(--on-accent); }
+
+/* Dezente Scrollbalken passend zum Holz. */
+* { scrollbar-width: thin; scrollbar-color: #4a3c31 transparent; }

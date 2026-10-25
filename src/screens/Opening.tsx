@@ -48,6 +48,8 @@ interface Props {
   onBack: () => void;
   onStart: (filter: BatchFilter) => void;
   onChanged: () => void;
+  /** Variantenbaum eines gemerkten Puzzles oeffnen. */
+  onStudy: (puzzle: PuzzleDto) => void;
 }
 
 export function Opening({
@@ -58,6 +60,7 @@ export function Opening({
   onBack,
   onStart,
   onChanged,
+  onStudy,
 }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [related, setRelated] = useState<CatalogHit[]>([]);
@@ -303,10 +306,11 @@ export function Opening({
           <ul className="favlist">
             {favs.map((p) => (
               <li key={p.id}>
-                <span>
+                <button className="favlist-open" onClick={() => onStudy(p)} title="Variantenbaum öffnen">
                   <b>{p.rating}</b>{' '}
                   <span className="muted small">{p.name}</span>
-                </span>
+                  {p.has_study && <span className="tree-mark" title="hat eigene Varianten">⑂ Varianten</span>}
+                </button>
                 <button
                   className="heart on"
                   onClick={() => unfavorite(p.id)}

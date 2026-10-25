@@ -50,6 +50,8 @@ export interface PuzzleDto {
   variation: string;
   name: string;
   favorite: boolean;
+  /** Hat einen eigenen Variantenbaum. */
+  has_study: boolean;
   card: CardDto | null;
 }
 
@@ -141,3 +143,10 @@ export const favoritesSummary = () => invoke<OpeningSummary | null>('favorites_s
 export const listFavorites = (limit = 300) => invoke<PuzzleDto[]>('list_favorites', { limit });
 
 export const clearFavorites = () => invoke<number>('clear_favorites');
+
+/** Der gespeicherte Variantenbaum als JSON, null wenn es nur die Loesung gibt. */
+export const getStudy = (puzzleId: string) => invoke<string | null>('get_study', { puzzleId });
+
+/** null loescht den Baum. */
+export const saveStudy = (puzzleId: string, tree: string | null) =>
+  invoke<void>('save_study', { puzzleId, tree });

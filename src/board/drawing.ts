@@ -1,6 +1,7 @@
 // Zeichnen auf dem Brett, uebernommen aus FireHorse (Drawing.kt): Pfeile,
 // Kreise und ausgefuellte Felder in sechs Stiften, deren Farben frei waehlbar
-// sind. Gezeichnetes gehoert zur Stellung und wird nicht gespeichert.
+// sind. Gezeichnetes gehoert zur Stellung; gespeichert wird es nur im
+// Variantenbaum (study.ts), dort je Knoten.
 
 import type { Key } from '@lichess-org/chessground/types';
 

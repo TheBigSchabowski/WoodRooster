@@ -1,7 +1,8 @@
 # WoodRooster
 
 Chess puzzles grouped by opening, drilled with spaced repetition. Native desktop
-app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
+app (macOS `.dmg`, Linux AppImage/`.deb`) and Android app (`.apk`) from one Tauri
+codebase.
 
 > **The documentation below is in German** — it is a personal project. This
 > section is the short English version.
@@ -18,13 +19,19 @@ app (macOS `.dmg`) and Android app (`.apk`) from one Tauri codebase.
 > board squares in **any hex colour**, and the **drawing mode** from FireHorse
 > (arrows, circles and filled squares in six freely coloured pens).
 >
+> **New in 0.3.0:** a **variation tree** for your favourite puzzles — the
+> solution stays fixed as the main line (and is still the only thing you are
+> quizzed on), but you can branch off with your own moves, add notes and keep
+> drawings per position. Plus a warmer, wood-toned look, and Linux builds.
+>
 > **Privacy.** All learning progress lives in a local SQLite file and is never
 > sent anywhere. The app touches the network only when you tap "view game" on a
 > solved puzzle.
 >
 > **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/WoodRooster/releases/latest):
-> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_android-arm64.apk)
-> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_macos-arm64.dmg)
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_macos-arm64.dmg)
+> - [Linux AppImage (x86_64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-x86_64.AppImage) · [.deb](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-amd64.deb)
 >
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
@@ -74,9 +81,22 @@ dem alten Schachtrainer; dort beginnt der Lernstand neu.
   Feld, oben „Löschen“ und „Fertig“. Mit der Maus zeichnet die rechte Taste auch
   ohne Modus; Shift, Alt oder beide nehmen Stift 2, 3 oder 4 wie auf lichess.
   Gezeichnetes gehört zur Stellung: der nächste Zug oder ein normaler Klick
-  wischt es weg, gespeichert wird nichts. Die Farbe jedes Stifts ist frei
+  wischt es weg, gespeichert wird nichts — außer im Variantenbaum (unten). Die Farbe jedes Stifts ist frei
   wählbar (Einstellungen → Zeichenstifte): aus 16 Farben oder als eigener Code
   mit Namen, z. B. `#7FFFD4` „Aquamarin“.
+
+- **Variantenbaum für gemerkte Puzzle:** Nur für Puzzle mit ♥ — nach dem
+  Lösen `A` oder „Variantenbaum“, oder im Ordner **Gemerkte Puzzle** auf ein
+  Puzzle tippen. Die Lösung
+  steht fest als Hauptvariante (fett) darin; jeder andere Zug auf dem Brett —
+  für beide Seiten — legt eine eigene Abzweigung an, die in Klammern
+  erscheint. Je Stellung lassen sich eine Notiz schreiben und Pfeile, Kreise
+  und Felder zeichnen, beides wird gespeichert. Eigene Varianten kann man
+  löschen oder nach vorn schieben, die Lösung nicht. `←` `→` gehen einen Zug
+  zurück und vor, `↑` `↓` an den Anfang und ans Ende. **Abgefragt wird beim
+  Üben weiterhin nur die Lösung.** Gespeichert wird in einer eigenen Tabelle `study`; sie
+  übersteht wie die Merkungen das Entfernen der Eröffnung; wer die Merkung
+  aufhebt und später neu setzt, findet den alten Baum wieder.
 
 ## Download (Fertige Apps)
 
@@ -84,13 +104,15 @@ Fertig gebaute Installationsdateien können direkt heruntergeladen werden — ke
 
 | Plattform | Download | Details |
 |---|---|---|
-| **Android** | [`.apk` herunterladen (v0.2.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
-| **macOS** | [`.dmg` herunterladen (v0.2.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.2.0_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Android** | [`.apk` herunterladen (v0.3.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.3.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Linux** | [AppImage (v0.3.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-x86_64.AppImage) · [`.deb`](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-amd64.deb) | x86_64, ab Ubuntu 22.04 / Debian 12 |
 
 Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/WoodRooster/releases)**.
 
 **Hinweise zur Installation:**
 - **Android:** Das APK im Browser auf dem Smartphone herunterladen und öffnen. Bei der Abfrage „Aus dieser Quelle installieren“ bzw. unbekannte Quellen die Erlaubnis für den Browser oder Dateimanager erteilen.
+- **Linux:** AppImage ausführbar machen (`chmod +x WoodRooster_*.AppImage`) und starten, oder das `.deb` mit `sudo apt install ./WoodRooster_*.deb` installieren.
 - **macOS:** DMG öffnen und die App in den Programme-Ordner ziehen. Da die App als Hobbyprojekt nicht mit einem kostenpflichtigen Apple-Entwicklerzertifikat signiert ist, beim ersten Start: Rechtsklick auf die App → **Öffnen** → **Öffnen** bestätigen.
 
 ## Starten und bauen (Entwicklung)
@@ -136,6 +158,12 @@ npm run build:all
 Das Skript baut DMG und APK, benennt sie für die Releases um und erzeugt
 `dist/releases/SHA256SUMS.txt`.
 
+**Linux** lässt sich nicht vom Mac aus bauen (Tauri braucht dort WebKitGTK).
+Das übernimmt der GitHub-Workflow `.github/workflows/linux.yml` auf einem
+Ubuntu-22.04-Runner: Actions → „Linux“ → „Run workflow“, als Tag das Release
+angeben (z. B. `v0.3.0`). Er erzeugt den Puzzle-Pack selbst aus der aktuellen
+Lichess-Datenbank und hängt AppImage und `.deb` ans Release.
+
 ## Bedienung während einer Sitzung
 
 | Taste | Wirkung |
@@ -149,6 +177,7 @@ Das Skript baut DMG und APK, benennt sie für die Releases um und erzeugt
 | `F` | Puzzle merken, geht auch während des Lösens |
 | `B` | Blindmodus: Brett auf- und zuklappen |
 | `M` | Zeichenmodus an/aus |
+| `A` | nach dem Lösen, bei gemerkten Puzzlen: Variantenbaum |
 
 Im Zeichenmodus ist jede Taste allein ein Befehl und geht vor die Tasten oben:
 `1`–`6` Stift, `←` `→` Stift wechseln, `O` (oder `↑` `↓`) Kreis/Feld, `X` alles
@@ -248,15 +277,17 @@ tools/make-emoji-icon.m   rendert ein Emoji als Icon-Quelle (siehe unten)
 tools/make-icon.mjs       zeichnet stattdessen ein Schachbrett-Icon
 tools/test-solve.mjs      spielt echte Puzzle durch, prüft die Abspiel-Logik
 tools/test-blind.mjs      tippt echte Lösungen blind ein, prüft das Zeichnen
+tools/test-study.mjs      prüft den Variantenbaum, auch an 1.200 echten Puzzlen
 tools/android-env.sh      Umgebungsvariablen für den Android-Build
 
 src/board/solve.ts        Abspiel-Logik eines Puzzles, getippte Züge, Zugliste
 src/board/PuzzleBoard.tsx Brett (chessground), Zeichenmodus, eigene Feldfarben
 src/board/drawing.ts      Pfeile, Kreise, Felder und Stifte (wie FireHorse)
+src/board/study.ts        Variantenbaum: Loesung, Abzweigungen, Notizen, Zeichnungen
 src/board/prefs.ts        Brettfarben, Stifte, Blindmodus, Kacheln (Schlüssel „board“)
 src/tapzones.ts           Doppeltippen: Kacheln, Befehle, Erkennung
 src/srs/scheduler.ts      FSRS-Anbindung, Intervalle für die Bewertungsknöpfe
-src/screens/              Start, Eröffnung, Sitzung, Einstellungen
+src/screens/              Start, Eröffnung, Sitzung, Variantenbaum, Einstellungen
 
 src-tauri/src/pack.rs     liest einen einzelnen Block aus openings.pack
 src-tauri/src/db.rs       SQLite-Schema

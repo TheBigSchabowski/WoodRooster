@@ -101,7 +101,12 @@ export function Home({ onOpen, onSettings }: Props) {
   return (
     <div className="screen">
       <header className="topbar">
-        <h1>WoodRooster</h1>
+        <h1 className="brand">
+          <span className="brand-mark" aria-hidden>🐓</span>
+          <span>
+            Wood<span className="brand-word">Rooster</span>
+          </span>
+        </h1>
         <button className="ghost" onClick={onSettings}>
           Einstellungen
         </button>

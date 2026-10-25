@@ -31,6 +31,12 @@ interface Props {
   pens: PenColor[];
   /** Zugeklappt (Blindmodus): das Brett bleibt bestehen, ist aber nicht zu sehen. */
   collapsed?: boolean;
+  /** Beide Seiten ziehen lassen (Variantenbaum), sonst nur die Seite unten. */
+  bothSides?: boolean;
+  /** Mit `onMarks` gehoert das Gezeichnete dem Aufrufer (Variantenbaum: je
+   *  Stellung gespeichert). Dann wischt weder ein Zug noch ein Klick es weg. */
+  marks?: Mark[];
+  onMarks?: (marks: Mark[]) => void;
 }
 
 /** Wie schnell aufeinander drei Tipper kommen muessen, um den Zeichenmodus umzuschalten. */
@@ -48,8 +54,12 @@ export function PuzzleBoard(props: Props) {
   const onMove = useRef(props.onMove);
   onMove.current = props.onMove;
 
+  const onMarks = useRef(props.onMarks);
+  onMarks.current = props.onMarks;
+
   // Gezeichnetes gehoert zur Stellung: ein Zug wischt das Brett sauber.
-  const [drawn, setDrawn] = useState<Mark[]>([]);
+  const [own, setOwn] = useState<Mark[]>([]);
+  const drawn = props.onMarks ? props.marks ?? [] : own;
   const [drawing, setDrawing] = useState<Mark | null>(null);
   const [drawMode, setDrawMode] = useState(false);
   const [pen, setPen] = useState<Pen>({ color: 0, field: false });
@@ -59,6 +69,14 @@ export function PuzzleBoard(props: Props) {
   // Fuer die Fenster-Listener, die nicht bei jedem Rendern neu gebunden werden.
   const live = useRef({ drawn, drawMode, pen, collapsed: !!props.collapsed });
   live.current = { drawn, drawMode, pen, collapsed: !!props.collapsed };
+
+  /** Fuer beide Faelle gleich: eigene Zeichnung oder die des Aufrufers. Nur
+   *  ueber Refs, weil auch die einmal gebundenen Listener es benutzen. */
+  function setDrawn(next: Mark[] | ((d: Mark[]) => Mark[])) {
+    const handler = onMarks.current;
+    if (!handler) return setOwn(next);
+    handler(typeof next === 'function' ? next(live.current.drawn) : next);
+  }
 
   useEffect(() => {
     if (!host.current) return;
@@ -108,7 +126,7 @@ export function PuzzleBoard(props: Props) {
       lastMove: props.lastMove,
       check: props.check,
       movable: {
-        color: props.movable && !drawMode ? props.orientation : undefined,
+        color: props.movable && !drawMode ? (props.bothSides ? 'both' : props.orientation) : undefined,
         dests: props.movable && !drawMode ? props.dests : new Map(),
       },
     });
@@ -119,6 +137,7 @@ export function PuzzleBoard(props: Props) {
     props.lastMove,
     props.check,
     props.movable,
+    props.bothSides,
     props.dests,
     props.revision,
     drawMode,
@@ -132,7 +151,7 @@ export function PuzzleBoard(props: Props) {
 
   // Neue Stellung, sauberes Brett; die Tipper davor zaehlen nicht mehr.
   useEffect(() => {
-    setDrawn([]);
+    setOwn([]);
     setDrawing(null);
     taps.current.count = 0;
   }, [props.fen]);
@@ -254,7 +273,7 @@ export function PuzzleBoard(props: Props) {
       if (upAt - downAt < TAP_HOLD_MS && keyAt(u.clientX, u.clientY)) tapped(downAt, upAt, before);
     };
     window.addEventListener('pointerup', onUp);
-    if (drawn.length > 0) setDrawn([]);
+    if (drawn.length > 0 && !props.onMarks) setDrawn([]);
   }
 
   // Im Zeichenmodus faengt eine Folie ueber dem Brett alles ab: nichts zieht.

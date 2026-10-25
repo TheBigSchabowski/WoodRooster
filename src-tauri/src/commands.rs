@@ -234,13 +234,14 @@ pub fn deactivate_opening(state: State<AppState>, slug: String) -> Result<(), St
     conn.execute("DELETE FROM opening WHERE slug = ?1", [&slug])
         .map_err(|e| e.to_string())?;
     // Puzzle, die zu keiner aktiven Eroeffnung mehr gehoeren und keinen
-    // Lernfortschritt tragen, wieder wegraeumen. Karten und gemerkte Puzzle
-    // bleiben unangetastet - sonst waere der Favoritenordner mit einer
-    // entfernten Eroeffnung mit weg.
+    // Lernfortschritt tragen, wieder wegraeumen. Karten, gemerkte Puzzle und
+    // Variantenbaeume bleiben unangetastet - sonst waere der Favoritenordner
+    // mit einer entfernten Eroeffnung mit weg.
     conn.execute(
         "DELETE FROM puzzle
           WHERE id NOT IN (SELECT puzzle_id FROM card)
             AND id NOT IN (SELECT puzzle_id FROM favorite)
+            AND id NOT IN (SELECT puzzle_id FROM study)
             AND NOT EXISTS (SELECT 1 FROM opening o
                              WHERE o.slug = puzzle.variation OR o.slug = puzzle.family)",
         [],
@@ -329,6 +330,8 @@ pub struct PuzzleDto {
     pub variation: String,
     pub name: String,
     pub favorite: bool,
+    /// Hat einen eigenen Variantenbaum.
+    pub has_study: bool,
     pub card: Option<CardDto>,
 }
 
@@ -375,7 +378,8 @@ fn query_batch(
         "SELECT p.id, p.fen, p.moves, p.rating, p.themes, p.variation,
                 c.due, c.stability, c.difficulty, c.elapsed_days, c.scheduled_days,
                 c.learning_steps, c.reps, c.lapses, c.state, c.last_review,
-                EXISTS(SELECT 1 FROM favorite f WHERE f.puzzle_id = p.id)
+                EXISTS(SELECT 1 FROM favorite f WHERE f.puzzle_id = p.id),
+                EXISTS(SELECT 1 FROM study s WHERE s.puzzle_id = p.id)
            FROM puzzle p {join}
           WHERE {scope}
             {cond}
@@ -431,6 +435,7 @@ fn query_batch(
                 name: display_name(&variation),
                 variation,
                 favorite: r.get(16)?,
+                has_study: r.get(17)?,
                 card,
             })
         })
@@ -696,7 +701,8 @@ pub fn list_favorites(state: State<AppState>, limit: usize) -> Result<Vec<Puzzle
     let conn = state.conn.lock().unwrap();
     let mut stmt = conn
         .prepare(
-            "SELECT p.id, p.fen, p.moves, p.rating, p.themes, p.variation
+            "SELECT p.id, p.fen, p.moves, p.rating, p.themes, p.variation,
+                    EXISTS(SELECT 1 FROM study s WHERE s.puzzle_id = p.id)
                FROM favorite f JOIN puzzle p ON p.id = f.puzzle_id
               ORDER BY f.added_at DESC
               LIMIT ?1",
@@ -714,6 +720,7 @@ pub fn list_favorites(state: State<AppState>, limit: usize) -> Result<Vec<Puzzle
                 name: display_name(&variation),
                 variation,
                 favorite: true,
+                has_study: r.get(6)?,
                 card: None,
             })
         })
@@ -727,6 +734,44 @@ pub fn list_favorites(state: State<AppState>, limit: usize) -> Result<Vec<Puzzle
 pub fn clear_favorites(state: State<AppState>) -> Result<usize, String> {
     let conn = state.conn.lock().unwrap();
     conn.execute("DELETE FROM favorite", []).map_err(|e| e.to_string())
+}
+
+// ------------------------------------------------------- Variantenbaum
+
+/// Der gespeicherte Variantenbaum eines Puzzles; `None`, wenn es nur die
+/// Loesung gibt.
+#[tauri::command]
+pub fn get_study(state: State<AppState>, puzzle_id: String) -> Result<Option<String>, String> {
+    let conn = state.conn.lock().unwrap();
+    load_study(&conn, &puzzle_id).map_err(|e| e.to_string())
+}
+
+/// Speichert den Baum; `None` (nichts ausser der Loesung) loescht ihn.
+#[tauri::command]
+pub fn save_study(state: State<AppState>, puzzle_id: String, tree: Option<String>) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    store_study(&conn, &puzzle_id, tree.as_deref()).map_err(|e| e.to_string())
+}
+
+fn load_study(conn: &Connection, puzzle_id: &str) -> rusqlite::Result<Option<String>> {
+    conn.query_row("SELECT tree FROM study WHERE puzzle_id = ?1", [puzzle_id], |r| r.get(0))
+        .map(Some)
+        .or_else(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            other => Err(other),
+        })
+}
+
+fn store_study(conn: &Connection, puzzle_id: &str, tree: Option<&str>) -> rusqlite::Result<()> {
+    match tree {
+        None => conn.execute("DELETE FROM study WHERE puzzle_id = ?1", [puzzle_id])?,
+        Some(tree) => conn.execute(
+            "INSERT INTO study(puzzle_id, tree, updated_at) VALUES(?1, ?2, ?3)
+             ON CONFLICT(puzzle_id) DO UPDATE SET tree = excluded.tree, updated_at = excluded.updated_at",
+            params![puzzle_id, tree, now_ms()],
+        )?,
+    };
+    Ok(())
 }
 
 // -------------------------------------------------------- Einstellungen
@@ -930,6 +975,40 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM puzzle WHERE id IN ('a','c')", [], |r| r.get(0))
             .unwrap();
         assert_eq!(n, 2, "gemerkte Puzzle duerfen nicht weggeraeumt werden");
+    }
+
+    #[test]
+    fn variantenbaum_speichern_ueberschreiben_loeschen() {
+        let conn = test_db();
+        assert_eq!(load_study(&conn, "a").unwrap(), None);
+        store_study(&conn, "a", Some("{\"v\":1}")).unwrap();
+        store_study(&conn, "a", Some("{\"v\":1,\"x\":2}")).unwrap();
+        assert_eq!(load_study(&conn, "a").unwrap().as_deref(), Some("{\"v\":1,\"x\":2}"));
+        let rows = query_batch(&conn, "Fam", &filter("free"), 5000).unwrap();
+        let with: Vec<&str> = rows.iter().filter(|p| p.has_study).map(|p| p.id.as_str()).collect();
+        assert_eq!(with, vec!["a"], "nur 'a' hat einen Baum");
+        store_study(&conn, "a", None).unwrap();
+        assert_eq!(load_study(&conn, "a").unwrap(), None);
+    }
+
+    /// Ein Variantenbaum muss das Entfernen der Eroeffnung ueberleben, auch
+    /// wenn das Puzzle nicht mehr gemerkt ist.
+    #[test]
+    fn aufraeumen_verschont_variantenbaeume() {
+        let conn = test_db();
+        conn.execute("DELETE FROM favorite WHERE puzzle_id = 'c'", []).unwrap();
+        store_study(&conn, "c", Some("{}")).unwrap();
+        conn.execute(
+            "DELETE FROM puzzle
+              WHERE id NOT IN (SELECT puzzle_id FROM card)
+                AND id NOT IN (SELECT puzzle_id FROM favorite)
+                AND id NOT IN (SELECT puzzle_id FROM study)
+                AND NOT EXISTS (SELECT 1 FROM opening o
+                                 WHERE o.slug = puzzle.variation OR o.slug = puzzle.family)",
+            [],
+        )
+        .unwrap();
+        assert!(load_study(&conn, "c").unwrap().is_some(), "Baum muss bleiben");
     }
 
     #[test]

@@ -133,6 +133,8 @@ pub fn run() {
             commands::favorites_summary,
             commands::list_favorites,
             commands::clear_favorites,
+            commands::get_study,
+            commands::save_study,
             commands::get_setting,
             commands::set_setting,
             commands::fetch_game,

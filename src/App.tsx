@@ -3,7 +3,8 @@ import { Home } from './screens/Home';
 import { Opening } from './screens/Opening';
 import { Session } from './screens/Session';
 import { Settings } from './screens/Settings';
-import { getSetting, setSetting, type BatchFilter } from './api/commands';
+import { Study } from './screens/Study';
+import { getSetting, setSetting, type BatchFilter, type PuzzleDto } from './api/commands';
 import { DEFAULT_SETTINGS, type SrsSettings } from './srs/scheduler';
 import { BOARD_KEY, DEFAULT_BOARD, type BoardPrefs } from './board/prefs';
 import { commandAt, commandOf, listenDoubleTaps, sendCommand } from './tapzones';
@@ -12,6 +13,7 @@ type View =
   | { name: 'home' }
   | { name: 'opening'; slug: string; label: string }
   | { name: 'session'; slug: string; label: string; filter: BatchFilter }
+  | { name: 'study'; slug: string; label: string; puzzle: PuzzleDto }
   | { name: 'settings' };
 
 const SETTINGS_KEY = 'srs';
@@ -128,6 +130,16 @@ export function App() {
             onStart={(filter) =>
               setView({ name: 'session', slug: view.slug, label: view.label, filter })
             }
+            onStudy={(puzzle) => setView({ name: 'study', slug: view.slug, label: view.label, puzzle })}
+          />
+        );
+
+      case 'study':
+        return (
+          <Study
+            puzzle={view.puzzle}
+            board={board}
+            onBack={() => setView({ name: 'opening', slug: view.slug, label: view.label })}
           />
         );
 
