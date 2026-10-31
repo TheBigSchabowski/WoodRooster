@@ -176,6 +176,9 @@ input[type='range'] { padding: 0; accent-color: var(--accent); }
 .mode:hover:not(:disabled) { background: linear-gradient(160deg, #46321e, #2a2018 75%); box-shadow: var(--glow); transform: translateY(-2px); }
 .mode b { font-size: 1.1rem; color: var(--accent); }
 .mode span { font-size: .85rem; color: var(--muted); }
+/* "Ueben": der Normalfall, eine ganze Zeile ueber den beiden Spezialmodi. */
+.mode.primary { width: 100%; margin-bottom: .75rem; padding: 1.35rem 1.2rem; border-color: rgba(242, 169, 59, .6); }
+.mode.primary b { font-size: 1.3rem; }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin-bottom: .75rem; box-shadow: var(--shadow); }
 .panel summary { cursor: pointer; font-weight: 600; }
@@ -503,6 +506,17 @@ kbd {
   background-size: 50% 50%;
   flex: none;
 }
+
+.piece-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  border-radius: 6px;
+  overflow: hidden;
+  flex: none;
+  box-shadow: var(--shadow);
+}
+.piece-preview span { width: 56px; height: 56px; display: grid; place-items: center; }
+.piece-preview img { width: 50px; height: 50px; }
 
 .pen-rows { display: grid; gap: .35rem; margin-bottom: .75rem; }
 .pen-row { display: flex; align-items: center; gap: .5rem; padding: .25rem .4rem; border-radius: 9px; border: 1px solid transparent; }

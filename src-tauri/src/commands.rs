@@ -335,14 +335,16 @@ pub struct PuzzleDto {
     pub card: Option<CardDto>,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// Intern: Auswahl fuer `query_batch`; die Sitzung fragt ueber `next_puzzle`.
 pub struct BatchFilter {
-    pub mode: String, // "new" | "due" | "free"
+    pub mode: String, // "new" | "due" | "ahead" | "free"
     pub limit: usize,
     pub rating_min: Option<i64>,
     pub rating_max: Option<i64>,
     pub theme: Option<String>,
+    /// Puzzle, die gerade nicht drankommen sollen (zuletzt gezeigt bzw. in
+    /// der freien Sitzung schon gesehen).
+    pub exclude: Vec<String>,
 }
 
 /// Join, Bedingung und Sortierung je Sitzungsmodus.
@@ -358,12 +360,20 @@ fn batch_clauses(mode: &str) -> Result<(&'static str, &'static str, &'static str
             "AND c.due <= :now",
             "ORDER BY c.due ASC",
         ),
+        // Karten im (Neu-)Lernen, die bald faellig werden - wie Ankis "learn
+        // ahead": ist sonst nichts mehr da, kommen sie etwas frueher dran,
+        // statt die Sitzung zu beenden. Der Aufrufer legt :now in die Zukunft.
+        "ahead" => (
+            "JOIN card c ON c.puzzle_id = p.id",
+            "AND c.state IN (1, 3) AND c.due <= :now",
+            "ORDER BY c.due ASC",
+        ),
         "free" => ("LEFT JOIN card c ON c.puzzle_id = p.id", "", "ORDER BY RANDOM()"),
         other => return Err(format!("Unbekannter Modus '{other}'")),
     })
 }
 
-/// Getrennt von `next_batch`, damit die Modi im Test wirklich gegen SQLite
+/// Getrennt von `next_puzzle`, damit die Modi im Test wirklich gegen SQLite
 /// laufen koennen statt nur zu kompilieren.
 fn query_batch(
     conn: &Connection,
@@ -373,6 +383,11 @@ fn query_batch(
 ) -> Result<Vec<PuzzleDto>, String> {
     let (join, cond, order) = batch_clauses(&filter.mode)?;
     let scope = scope_predicate(slug);
+    let excl = if filter.exclude.is_empty() {
+        ""
+    } else {
+        "AND p.id NOT IN (SELECT value FROM json_each(:excl))"
+    };
 
     let sql = format!(
         "SELECT p.id, p.fen, p.moves, p.rating, p.themes, p.variation,
@@ -386,11 +401,13 @@ fn query_batch(
             AND (:rmin IS NULL OR p.rating >= :rmin)
             AND (:rmax IS NULL OR p.rating <= :rmax)
             AND (:theme IS NULL OR p.themes LIKE :tlike)
+            {excl}
           {order}
           LIMIT :limit"
     );
 
     let theme_like = filter.theme.as_ref().map(|t| format!("%{t}%"));
+    let excl_json = serde_json::to_string(&filter.exclude).map_err(|e| e.to_string())?;
     let limit = filter.limit as i64;
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
@@ -403,6 +420,7 @@ fn query_batch(
             (":rmax", &filter.rating_max),
             (":theme", &filter.theme),
             (":tlike", &theme_like),
+            (":excl", &excl_json),
             (":limit", &limit),
         ],
     );
@@ -445,14 +463,130 @@ fn query_batch(
     Ok(rows)
 }
 
+/// Wie weit Lernkarten vorgezogen werden, wenn sonst nichts mehr da ist.
+/// Anki nimmt dafuer ebenfalls 20 Minuten.
+const LEARN_AHEAD_MS: i64 = 20 * 60 * 1000;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NextQuery {
+    /// "mix" (faellig, dann neu), "due", "new" oder "free".
+    pub mode: String,
+    /// Bereich fuer neue Puzzle (mix/new) bzw. fuer alle (free).
+    pub rating_min: Option<i64>,
+    pub rating_max: Option<i64>,
+    /// Nur in der freien Sitzung.
+    pub theme: Option<String>,
+    /// Neue Puzzle je Tag und Eroeffnung; nur "mix" haelt sich daran.
+    pub new_per_day: Option<i64>,
+    /// Beginn des heutigen Tages in Ortszeit, als Millisekunden.
+    pub day_start: i64,
+    #[serde(default)]
+    pub exclude: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct NextPuzzle {
+    pub puzzle: Option<PuzzleDto>,
+    /// Jetzt faellige Karten (ohne das gerade gezeigte Puzzle).
+    pub due: i64,
+    /// Neue Puzzle, die heute noch drankommen; None = keine Grenze.
+    pub new_left: Option<i64>,
+}
+
+/// Das naechste einzelne Puzzle. Jede Bewertung ist sofort gespeichert, die
+/// Sitzung fragt danach einfach neu - so kommt eine "Nochmal"-Karte nach ihrem
+/// Lernschritt zurueck, statt bis zum naechsten Stapel zu warten.
+fn query_next(
+    conn: &Connection,
+    slug: &str,
+    q: &NextQuery,
+    now: i64,
+) -> Result<NextPuzzle, String> {
+    let one = |mode: &str, band: bool, exclude: &[String], at: i64| {
+        let f = BatchFilter {
+            mode: mode.into(),
+            limit: 1,
+            rating_min: if band { q.rating_min } else { None },
+            rating_max: if band { q.rating_max } else { None },
+            theme: if mode == "free" { q.theme.clone() } else { None },
+            exclude: exclude.to_vec(),
+        };
+        query_batch(conn, slug, &f, at).map(|mut v| v.pop())
+    };
+
+    let scope = scope_predicate(slug);
+    let due_sql = format!(
+        "SELECT COUNT(*) FROM puzzle p JOIN card c ON c.puzzle_id = p.id
+          WHERE {scope} AND c.due <= :now"
+    );
+    let due: i64 = conn
+        .query_row(&due_sql, &used_binds(&due_sql, vec![(":slug", &slug), (":now", &now)])[..], |r| {
+            r.get(0)
+        })
+        .map_err(|e| e.to_string())?;
+
+    // Heute neu begonnen = Protokolleintraege im Zustand "neu" (0) seit
+    // Mitternacht. Zaehlt pro Eroeffnung, wie Ankis Grenze pro Stapel.
+    let new_left = match (q.mode.as_str(), q.new_per_day) {
+        ("mix", Some(limit)) => {
+            let sql = format!(
+                "SELECT COUNT(DISTINCT r.puzzle_id) FROM review_log r JOIN puzzle p ON p.id = r.puzzle_id
+                  WHERE {scope} AND r.state = 0 AND r.reviewed_at >= :day"
+            );
+            let started: i64 = conn
+                .query_row(
+                    &sql,
+                    &used_binds(&sql, vec![(":slug", &slug), (":day", &q.day_start)])[..],
+                    |r| r.get(0),
+                )
+                .map_err(|e| e.to_string())?;
+            Some((limit - started).max(0))
+        }
+        _ => None,
+    };
+
+    let ex = &q.exclude[..];
+    let puzzle = match q.mode.as_str() {
+        "free" => one("free", true, ex, now)?,
+        "new" => one("new", true, ex, now)?,
+        "due" | "mix" => {
+            let mut p = one("due", false, ex, now)?;
+            if p.is_none() && q.mode == "mix" && new_left != Some(0) {
+                p = one("new", true, ex, now)?;
+            }
+            if p.is_none() {
+                // Lieber ein anderes Lernpuzzle vorziehen; ist nur noch das
+                // gerade gezeigte uebrig, dann eben das.
+                p = one("ahead", false, ex, now + LEARN_AHEAD_MS)?;
+                if p.is_none() && !ex.is_empty() {
+                    p = one("ahead", false, &[], now + LEARN_AHEAD_MS)?;
+                }
+            }
+            p
+        }
+        other => return Err(format!("Unbekannter Modus '{other}'")),
+    };
+
+    let due = match &puzzle {
+        Some(p) if p.card.as_ref().is_some_and(|c| c.due <= now) => due - 1,
+        _ => due,
+    };
+    let new_left = match (&puzzle, new_left) {
+        (Some(p), Some(n)) if p.card.is_none() => Some((n - 1).max(0)),
+        (_, n) => n,
+    };
+    Ok(NextPuzzle { puzzle, due, new_left })
+}
+
 #[tauri::command]
-pub fn next_batch(
+pub fn next_puzzle(
     state: State<AppState>,
     slug: String,
-    filter: BatchFilter,
-) -> Result<Vec<PuzzleDto>, String> {
+    query: NextQuery,
+) -> Result<NextPuzzle, String> {
     let conn = state.conn.lock().unwrap();
-    query_batch(&conn, &slug, &filter, now_ms())
+    query_next(&conn, &slug, &query, now_ms())
 }
 
 #[derive(Deserialize)]
@@ -873,6 +1007,7 @@ mod tests {
             rating_min: None,
             rating_max: None,
             theme: None,
+            exclude: vec![],
         }
     }
 
@@ -1009,6 +1144,101 @@ mod tests {
         )
         .unwrap();
         assert!(load_study(&conn, "c").unwrap().is_some(), "Baum muss bleiben");
+    }
+
+    fn next(mode: &str, new_per_day: Option<i64>, exclude: &[&str]) -> NextQuery {
+        NextQuery {
+            mode: mode.into(),
+            rating_min: None,
+            rating_max: None,
+            theme: None,
+            new_per_day,
+            day_start: 0,
+            exclude: exclude.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+
+    fn id(n: &NextPuzzle) -> Option<&str> {
+        n.puzzle.as_ref().map(|p| p.id.as_str())
+    }
+
+    /// Kein Stapel mehr: erst das Faellige, danach das naechste neue Puzzle.
+    #[test]
+    fn einzeln_erst_faelliges_dann_neues() {
+        let conn = test_db();
+        let n = query_next(&conn, "Fam", &next("mix", Some(20), &[]), 5000).unwrap();
+        assert_eq!(id(&n), Some("b"));
+        assert_eq!(n.due, 0, "'b' selbst zaehlt nicht mehr als offen");
+        let n = query_next(&conn, "Fam", &next("mix", Some(20), &["b"]), 5000).unwrap();
+        assert_eq!(id(&n), Some("a"), "neue nach Rating aufsteigend");
+        assert_eq!(n.new_left, Some(19));
+    }
+
+    #[test]
+    fn neue_je_tag_werden_gezaehlt() {
+        let conn = test_db();
+        conn.execute(
+            "INSERT INTO review_log(puzzle_id, rating, state, reviewed_at) VALUES('a', 3, 0, 100)",
+            [],
+        )
+        .unwrap();
+        let n = query_next(&conn, "Fam", &next("mix", Some(1), &["b"]), 5000).unwrap();
+        assert_eq!(id(&n), None, "die eine neue Karte fuer heute ist verbraucht");
+        assert_eq!(n.new_left, Some(0));
+        // Ein frueherer Tag zaehlt nicht.
+        let mut q = next("mix", Some(1), &["b"]);
+        q.day_start = 1000;
+        assert_eq!(id(&query_next(&conn, "Fam", &q, 5000).unwrap()), Some("a"));
+    }
+
+    /// Das eigentliche Anliegen: eine mit "Nochmal" bewertete Karte kommt in
+    /// derselben Sitzung wieder, sobald ihr Lernschritt abgelaufen ist - und
+    /// vorgezogen, wenn sonst nichts mehr da ist.
+    #[test]
+    fn nochmal_karte_kommt_in_der_sitzung_zurueck() {
+        let conn = test_db();
+        conn.execute_batch(
+            "INSERT INTO card(puzzle_id, due, stability, difficulty, elapsed_days,
+                              scheduled_days, learning_steps, reps, lapses, state, last_review)
+               VALUES('a', 6000, 0.2, 7.0, 0.0, 0.0, 0, 1, 0, 1, 5000);",
+        )
+        .unwrap();
+        // Faellig ist nichts, neue sind fuer heute aus: 'a' wird vorgezogen,
+        // obwohl es gerade erst dran war, weil es das einzige ist.
+        let n = query_next(&conn, "Fam", &next("mix", Some(0), &["a"]), 500).unwrap();
+        assert_eq!(id(&n), Some("a"));
+        assert_eq!(n.due, 0);
+        // Nach Ablauf ist es ganz normal faellig.
+        let n = query_next(&conn, "Fam", &next("due", None, &[]), 7000).unwrap();
+        assert_eq!(id(&n), Some("b"), "'b' war frueher faellig");
+        let n = query_next(&conn, "Fam", &next("due", None, &["b"]), 7000).unwrap();
+        assert_eq!(id(&n), Some("a"));
+        // Gefestigte Karten ('b', Zustand 2) werden nie vorgezogen.
+        conn.execute("DELETE FROM card WHERE puzzle_id = 'a'", []).unwrap();
+        let n = query_next(&conn, "Fam", &next("due", None, &[]), 500).unwrap();
+        assert_eq!(id(&n), None);
+    }
+
+    #[test]
+    fn frei_laesst_gesehene_aus() {
+        let conn = test_db();
+        let n = query_next(&conn, "Fam", &next("free", None, &["a", "b"]), 5000).unwrap();
+        assert_eq!(id(&n), Some("c"));
+        let n = query_next(&conn, "Fam", &next("free", None, &["a", "b", "c"]), 5000).unwrap();
+        assert_eq!(id(&n), None);
+    }
+
+    #[test]
+    fn einzeln_bindet_seine_parameter_auch_im_favoritenordner() {
+        let conn = test_db();
+        for slug in ["Fam", FAVORITES] {
+            for mode in ["mix", "due", "new", "free"] {
+                for ex in [&[][..], &["a"][..]] {
+                    let r = query_next(&conn, slug, &next(mode, Some(5), ex), 5000);
+                    assert!(r.is_ok(), "{slug}/{mode}/{ex:?}: {:?}", r.err());
+                }
+            }
+        }
     }
 
     #[test]

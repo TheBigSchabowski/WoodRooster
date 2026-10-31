@@ -9,7 +9,7 @@ import {
   resetSrs,
   resolveOpening,
   activateOpening,
-  type BatchFilter,
+  type SessionFilter,
   type CatalogHit,
   type PuzzleDto,
   type Stats,
@@ -46,7 +46,7 @@ interface Props {
   settings: SrsSettings;
   onSettings: (s: SrsSettings) => void;
   onBack: () => void;
-  onStart: (filter: BatchFilter) => void;
+  onStart: (filter: SessionFilter) => void;
   onChanged: () => void;
   /** Variantenbaum eines gemerkten Puzzles oeffnen. */
   onStudy: (puzzle: PuzzleDto) => void;
@@ -67,7 +67,6 @@ export function Opening({
   const [ratingMin, setRatingMin] = useState(600);
   const [ratingMax, setRatingMax] = useState(3000);
   const [theme, setTheme] = useState('');
-  const [limit, setLimit] = useState(20);
   const [confirm, setConfirm] = useState<'all' | 'lapsed' | 'remove' | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [favs, setFavs] = useState<PuzzleDto[] | null>(null);
@@ -176,34 +175,47 @@ export function Opening({
         </div>
       )}
 
+      {/* Kein Stapel: die Sitzung holt ein Puzzle nach dem anderen, jede
+          Bewertung ist sofort gespeichert, Beenden geht jederzeit. */}
+      <button
+        className="mode primary"
+        disabled={!stats || (stats.due_count === 0 && stats.new_in_band === 0)}
+        onClick={() =>
+          onStart({
+            mode: 'mix',
+            ratingMin: band[0],
+            ratingMax: band[1],
+            newPerDay,
+          })
+        }
+      >
+        <b>Üben</b>
+        <span>
+          {stats
+            ? `${stats.due_count.toLocaleString('de-DE')} fällig, dann bis zu ${newPerDay} neue am Tag`
+            : '…'}
+          {stats && stats.new_in_band > 0 && !isFavorites && ` · ${difficultyLabel(settings)}`}
+          {' · '}einzeln, jederzeit beenden
+        </span>
+      </button>
       <div className="modes">
         <button
           className="mode"
           disabled={!stats || stats.due_count === 0}
-          onClick={() => onStart({ mode: 'due', limit })}
+          onClick={() => onStart({ mode: 'due' })}
         >
-          <b>Wiederholen</b>
+          <b>Nur fällige</b>
           <span>{stats ? `${stats.due_count.toLocaleString('de-DE')} fällig` : '…'}</span>
         </button>
         <button
           className="mode"
           disabled={!stats || stats.new_in_band === 0}
-          onClick={() =>
-            onStart({
-              mode: 'new',
-              limit: newPerDay,
-              ratingMin: band[0],
-              ratingMax: band[1],
-            })
-          }
+          onClick={() => onStart({ mode: 'new', ratingMin: band[0], ratingMax: band[1] })}
         >
-          <b>Neu</b>
+          <b>Nur neue</b>
           <span>
             {stats ? `${stats.new_in_band.toLocaleString('de-DE')} verfügbar` : '…'}
-            {stats && stats.new_count > 0 &&
-              ` · ${Math.min(newPerDay, stats.new_in_band)} in dieser Sitzung`}
-            {stats && stats.new_in_band > 0 && !isFavorites &&
-              ` · ${difficultyLabel(settings)}`}
+            {' · '}ohne Tagesgrenze
           </span>
         </button>
       </div>
@@ -211,8 +223,9 @@ export function Opening({
       <details className="panel">
         <summary>Freie Sitzung — nur bestimmte Puzzle</summary>
         <p className="muted">
-          Geht durch beliebige Puzzle dieser Eröffnung, unabhängig davon, wann sie fällig
-          wären. Bewertungen zählen ganz normal für die Wiederholung.
+          Geht in zufälliger Reihenfolge durch beliebige Puzzle dieser Eröffnung,
+          unabhängig davon, wann sie fällig wären — so lange du willst. Jede Bewertung
+          zählt sofort ganz normal für die Wiederholung.
         </p>
         <div className="fields">
           <label>
@@ -247,23 +260,11 @@ export function Opening({
               ))}
             </select>
           </label>
-          <label>
-            Anzahl
-            <input
-              type="number"
-              value={limit}
-              min={5}
-              max={200}
-              step={5}
-              onChange={(e) => setLimit(Number(e.target.value))}
-            />
-          </label>
         </div>
         <button
           onClick={() =>
             onStart({
               mode: 'free',
-              limit,
               ratingMin,
               ratingMax,
               theme: theme || null,

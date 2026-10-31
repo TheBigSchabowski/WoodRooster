@@ -1,6 +1,7 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS, DIFFICULTIES, type SrsSettings } from '../srs/scheduler';
-import { BOARD_THEMES, DEFAULT_BOARD, type BoardPrefs } from '../board/prefs';
+import { BOARD_THEMES, DEFAULT_BOARD, LOOKS, isLook, withLook, type BoardPrefs } from '../board/prefs';
+import { pieceUri, type PieceColors, type PieceRole, type PieceSide } from '../board/pieces';
 import { INKS, normalizeHex, pensFrom, savePen, type PenColor } from '../board/drawing';
 import { COMMANDS, TAP_COLS_MAX, TAP_ROWS_MAX, commandAt, commandOf, withGrid, zoneLabel } from '../tapzones';
 
@@ -76,7 +77,7 @@ export function Settings({ settings, board, onSave, onBack }: Props) {
 
         <label className="field">
           <span>
-            Neue Puzzle je Sitzung <b>{s.newPerDay}</b>
+            Neue Puzzle am Tag (je Eröffnung) <b>{s.newPerDay}</b>
           </span>
           <input
             type="range"
@@ -190,8 +191,36 @@ export function Settings({ settings, board, onSave, onBack }: Props) {
       </div>
 
       <div className="panel">
-        <h2>Brettfarben</h2>
+        <h2>Brett und Figuren</h2>
+        <p className="muted small">Vorlagen setzen Felder und Figuren zusammen.</p>
         <div className="chips">
+          {LOOKS.map((l) => (
+            <button
+              key={l.label}
+              className={`chip ${isLook(b, l) ? 'on' : ''}`}
+              onClick={() => setB((prev) => withLook(prev, l))}
+            >
+              <span className="swatch" style={{ background: l.light }} />
+              <span className="swatch" style={{ background: l.dark }} />
+              {l.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="colors">
+          <div className="color-rows">
+            <ColorRow label="Helle Felder" value={b.light} onChange={(v) => changeBoard('light', v)} />
+            <ColorRow label="Dunkle Felder" value={b.dark} onChange={(v) => changeBoard('dark', v)} />
+            <ColorRow label="Weiß: Körper" value={b.whiteFill} onChange={(v) => changeBoard('whiteFill', v)} />
+            <ColorRow label="Weiß: Linien" value={b.whiteLine} onChange={(v) => changeBoard('whiteLine', v)} />
+            <ColorRow label="Schwarz: Körper" value={b.blackFill} onChange={(v) => changeBoard('blackFill', v)} />
+            <ColorRow label="Schwarz: Linien" value={b.blackLine} onChange={(v) => changeBoard('blackLine', v)} />
+          </div>
+          <PiecePreview b={b} />
+        </div>
+
+        <div className="chips">
+          <span className="muted small">Nur Felder:</span>
           {BOARD_THEMES.map((t) => (
             <button
               key={t.label}
@@ -204,20 +233,20 @@ export function Settings({ settings, board, onSave, onBack }: Props) {
             </button>
           ))}
         </div>
-        <div className="colors">
-          <div className="color-rows">
-            <ColorRow label="Helle Felder" value={b.light} onChange={(v) => changeBoard('light', v)} />
-            <ColorRow label="Dunkle Felder" value={b.dark} onChange={(v) => changeBoard('dark', v)} />
-          </div>
-          <div
-            className="mini-board"
-            style={{ '--sq-light': b.light, '--sq-dark': b.dark } as CSSProperties}
-            aria-hidden
-          />
-        </div>
         <span className="muted small">
-          Als Hexcode, z. B. <kbd>#E6C99B</kbd> oder kurz <kbd>#ec9</kbd>.
+          Als Hexcode, z. B. <kbd>#E6C99B</kbd> oder kurz <kbd>#ec9</kbd>. Bei Schwarz
+          bleibt die Kontur in der Körperfarbe, „Linien“ sind die hellen Innenlinien.
+          Gilt erst nach „Speichern“.
         </span>
+        <div className="actions">
+          <button
+            className="ghost"
+            disabled={isLook(b, LOOKS[0])}
+            onClick={() => setB((prev) => withLook(prev, LOOKS[0]))}
+          >
+            Standard wiederherstellen
+          </button>
+        </div>
       </div>
 
       <div className="panel">
@@ -431,6 +460,27 @@ function Stepper(props: { label: string; value: number; min: number; max: number
           +
         </button>
       </div>
+    </div>
+  );
+}
+
+const PREVIEW: [PieceRole, PieceSide][] = [
+  ['king', 'white'], ['queen', 'black'], ['knight', 'white'],
+  ['knight', 'black'], ['queen', 'white'], ['king', 'black'],
+];
+
+/** Sechs Figuren auf abwechselnden Feldern, in den noch nicht gespeicherten Farben. */
+function PiecePreview({ b }: { b: BoardPrefs & PieceColors }) {
+  return (
+    <div className="piece-preview" aria-hidden>
+      {PREVIEW.map(([role, side], i) => {
+        const light = (Math.floor(i / 3) + i) % 2 === 0;
+        return (
+          <span key={i} style={{ background: light ? b.light : b.dark }}>
+            <img src={pieceUri(role, side, b)} alt="" />
+          </span>
+        );
+      })}
     </div>
   );
 }

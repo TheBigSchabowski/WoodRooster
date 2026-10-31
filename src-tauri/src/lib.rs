@@ -124,7 +124,7 @@ pub fn run() {
             commands::activate_opening,
             commands::deactivate_opening,
             commands::list_activated,
-            commands::next_batch,
+            commands::next_puzzle,
             commands::record_review,
             commands::reset_srs,
             commands::reset_puzzles,

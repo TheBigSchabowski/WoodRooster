@@ -19,6 +19,13 @@ codebase.
 > board squares in **any hex colour**, and the **drawing mode** from FireHorse
 > (arrows, circles and filled squares in six freely coloured pens).
 >
+> **New in 0.3.1:** practice is **one puzzle at a time** instead of fixed
+> batches — due puzzles first, then new ones up to a daily limit, every grade
+> saved at once, and a puzzle you missed comes back in the same session.
+> Board squares *and pieces* in any hex colour, with nine ready-made looks and
+> a reset to standard. And the rooster icon finally shows up on Android
+> (0.3.0 shipped Tauri's default icon there).
+>
 > **New in 0.3.0:** a **variation tree** for your favourite puzzles — the
 > solution stays fixed as the main line (and is still the only thing you are
 > quizzed on), but you can branch off with your own moves, add notes and keep
@@ -29,9 +36,9 @@ codebase.
 > solved puzzle.
 >
 > **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/WoodRooster/releases/latest):
-> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_android-arm64.apk)
-> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_macos-arm64.dmg)
-> - [Linux AppImage (x86_64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-x86_64.AppImage) · [.deb](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-amd64.deb)
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_macos-arm64.dmg)
+> - [Linux AppImage (x86_64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-x86_64.AppImage) · [.deb](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-amd64.deb)
 >
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
@@ -70,10 +77,16 @@ dem alten Schachtrainer; dort beginnt der Lernstand neu.
   merken, unten rechts nichts. Raster (1–3 Spalten, 1–4 Reihen) und Belegung
   jeder Kachel stellst du unter Einstellungen → Doppeltippen ein, dort lässt
   es sich auch ganz ausschalten.
-- **Brettfarben per Hexcode:** helle und dunkle Felder frei wählbar
-  (Einstellungen → Brettfarben), über den Farbwähler, als `#E6C99B` oder kurz
-  `#ec9`, dazu fünf Vorlagen (Braun, Holz, Blau, Grün, Grau). Die Koordinaten
-  nehmen jeweils die Gegenfarbe ihres Feldes an.
+- **Felder und Figuren per Hexcode:** helle und dunkle Felder sowie je Seite
+  Körper und Linien der Figuren frei wählbar (Einstellungen → Brett und
+  Figuren), über den Farbwähler, als `#E6C99B` oder kurz `#ec9`. Neun
+  Gesamtvorlagen (Standard, Holz, Turnier, Ozean, Kirsche, Marmor, Lavendel,
+  Nacht, Gold) setzen beides zusammen, dazu fünf Vorlagen nur für die Felder.
+  „Standard wiederherstellen“ holt das klassische Brett zurück. Die Figuren
+  sind die cburnett-Figuren von chessground, nur umgefärbt
+  (`src/board/pieces.ts`); bei Schwarz bleibt die Kontur in der Körperfarbe,
+  „Linien“ sind dort die hellen Innenlinien. Die Koordinaten nehmen jeweils die
+  Gegenfarbe ihres Feldes an.
 - **Zeichenmodus (aus FireHorse):** dreimal schnell aufs Brett tippen oder `M`.
   Ein grüner Rahmen zeigt den Modus an; Antippen kreist ein Feld ein (nochmal
   tippen nimmt es weg), Ziehen malt einen Pfeil, Züge sind gesperrt. Unten auf
@@ -104,9 +117,9 @@ Fertig gebaute Installationsdateien können direkt heruntergeladen werden — ke
 
 | Plattform | Download | Details |
 |---|---|---|
-| **Android** | [`.apk` herunterladen (v0.3.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
-| **macOS** | [`.dmg` herunterladen (v0.3.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
-| **Linux** | [AppImage (v0.3.0)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-x86_64.AppImage) · [`.deb`](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.0_linux-amd64.deb) | x86_64, ab Ubuntu 22.04 / Debian 12 |
+| **Android** | [`.apk` herunterladen (v0.3.1)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.3.1)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Linux** | [AppImage (v0.3.1)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-x86_64.AppImage) · [`.deb`](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-amd64.deb) | x86_64, ab Ubuntu 22.04 / Debian 12 |
 
 Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/WoodRooster/releases)**.
 
@@ -164,6 +177,33 @@ Ubuntu-22.04-Runner: Actions → „Linux“ → „Run workflow“, als Tag das
 angeben (z. B. `v0.3.0`). Er erzeugt den Puzzle-Pack selbst aus der aktuellen
 Lichess-Datenbank und hängt AppImage und `.deb` ans Release.
 
+## Üben: einzeln statt im Stapel
+
+Eine Sitzung hat keinen festen Stapel mehr. **Üben** auf der Eröffnungsseite
+holt immer genau *ein* Puzzle: erst alles, was gerade fällig ist, dann neue
+Puzzle im eingestellten Schwierigkeitsbereich — bis zu „Neue Puzzle am Tag“
+je Eröffnung (Einstellungen, Standard 20; gezählt ab Mitternacht Ortszeit).
+Jede Bewertung ist sofort gespeichert, Beenden geht jederzeit ohne Verlust.
+
+Dadurch greift das Spaced Repetition auch innerhalb der Sitzung: ein mit
+„Nochmal“ bewertetes Puzzle kommt nach seinem Lernschritt (1 bzw. 10 Minuten)
+wieder dran, statt bis zur nächsten Sitzung zu warten. Ist sonst nichts mehr
+da, werden Lernkarten wie bei Anki bis zu 20 Minuten vorgezogen; das gerade
+gelöste Puzzle kommt nie direkt zweimal hintereinander, außer es ist das
+einzige. Oben steht statt „3 / 20“ jetzt „12 geübt · 4 fällig · 8 neu“.
+
+Daneben: **Nur fällige**, **Nur neue** (ohne Tagesgrenze) und die **freie
+Sitzung** (Rating, Motiv, zufällige Reihenfolge, zeigt nichts doppelt).
+Ist das Tageskontingent durch, bietet das Sitzungsende „Noch mehr neue“ an.
+„Dieselben nochmal“ geht die Puzzle der Sitzung ein zweites Mal durch, ohne
+zu bewerten — die Karten von vorhin würden sonst den gespeicherten Stand
+überschreiben.
+
+Im Backend ist das der Befehl `next_puzzle` (`src-tauri/src/commands.rs`); die
+Tests `nochmal_karte_kommt_in_der_sitzung_zurueck`,
+`einzeln_erst_faelliges_dann_neues` und `neue_je_tag_werden_gezaehlt` halten
+das Verhalten fest.
+
 ## Bedienung während einer Sitzung
 
 | Taste | Wirkung |
@@ -210,7 +250,7 @@ Ordner der gemerkten Puzzle gilt sie gar nicht.
 In einer Sitzung schaltet das Herz neben dem Rating (oder die Taste `f`) ein
 Puzzle zum Merken frei. Alle gemerkten landen im Ordner **Gemerkte Puzzle** auf
 der Startseite — quer über alle Eröffnungen hinweg — und lassen sich dort
-genauso üben wie eine Eröffnung: Neu, Wiederholen, freie Sitzung, zurücksetzen.
+genauso üben wie eine Eröffnung: Üben, nur fällige, nur neue, freie Sitzung, zurücksetzen.
 
 Zwei Entscheidungen dahinter:
 
@@ -339,7 +379,28 @@ npx tauri icon tools/icon-source.png
 ```
 
 Danach neu bauen. `npx tauri icon` erzeugt daraus alle Größen inklusive der
-Android-Mipmaps. Alternativ zeichnet `node tools/make-icon.mjs` das ursprüngliche
+Android-Mipmaps.
+
+**Android braucht zwei Extraschritte** (bis 0.3.0 kam deshalb Tauris
+Standard-Logo aufs Handy):
+
+1. Für das adaptive Icon die Vordergrundebene ohne Grund rendern und in die
+   Mipmaps legen — `tauri icon` macht daraus sonst eine dunkle Kachel auf
+   weißem Grund, die der Launcher beschneidet:
+   ```sh
+   /tmp/mkicon 🐓 tools/icon-foreground.png --adaptive
+   for d in mdpi:108 hdpi:162 xhdpi:216 xxhdpi:324 xxxhdpi:432; do
+     sips -z ${d##*:} ${d##*:} tools/icon-foreground.png \
+       --out src-tauri/icons/android/mipmap-${d%%:*}/ic_launcher_foreground.png
+   done
+   ```
+   Die Hintergrundfarbe steht in
+   `src-tauri/icons/android/values/ic_launcher_background.xml` (`#1C212B`).
+2. `tools/android-sign.sh` kopiert `src-tauri/icons/android` ins generierte
+   Projekt `src-tauri/gen/android`. Das ist nötig, weil `tauri android init`
+   dort Tauris eigenes Icon hinlegt und `tauri icon` das generierte Projekt
+   nicht anfasst, wenn es erst danach entsteht. `npm run build:all` ruft das
+   Skript ohnehin auf. Alternativ zeichnet `node tools/make-icon.mjs` das ursprüngliche
 Schachbrett-Icon ohne Emoji.
 
 Gerendert wird mit dem echten Systemfont (Apple Color Emoji), damit das Icon

@@ -4,15 +4,16 @@ import { Opening } from './screens/Opening';
 import { Session } from './screens/Session';
 import { Settings } from './screens/Settings';
 import { Study } from './screens/Study';
-import { getSetting, setSetting, type BatchFilter, type PuzzleDto } from './api/commands';
+import { getSetting, setSetting, type SessionFilter, type PuzzleDto } from './api/commands';
 import { DEFAULT_SETTINGS, type SrsSettings } from './srs/scheduler';
 import { BOARD_KEY, DEFAULT_BOARD, type BoardPrefs } from './board/prefs';
+import { applyPieceColors } from './board/pieces';
 import { commandAt, commandOf, listenDoubleTaps, sendCommand } from './tapzones';
 
 type View =
   | { name: 'home' }
   | { name: 'opening'; slug: string; label: string }
-  | { name: 'session'; slug: string; label: string; filter: BatchFilter }
+  | { name: 'session'; slug: string; label: string; filter: SessionFilter }
   | { name: 'study'; slug: string; label: string; puzzle: PuzzleDto }
   | { name: 'settings' };
 
@@ -63,6 +64,11 @@ export function App() {
     },
     [saveQuiet, saveBoard],
   );
+
+  // Figurenfarben gelten fuer jedes Brett der App, auch den Variantenbaum.
+  useEffect(() => {
+    applyPieceColors(board);
+  }, [board.whiteFill, board.whiteLine, board.blackFill, board.blackLine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Doppeltippen auf eine freie Stelle: Blind schaltet hier, alles andere geht
   // an Sitzung und Brett. Eine kurze Meldung sagt, was passiert ist.

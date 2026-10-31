@@ -67,14 +67,26 @@ export interface Stats {
   lapses: number;
 }
 
-export type SessionMode = 'new' | 'due' | 'free';
+/** mix: erst Fälliges, dann Neues (bis zur Tagesgrenze) - der Normalfall. */
+export type SessionMode = 'mix' | 'new' | 'due' | 'free';
 
-export interface BatchFilter {
+/** Wonach eine Sitzung ihre Puzzle einzeln holt; es gibt keinen festen Stapel. */
+export interface SessionFilter {
   mode: SessionMode;
-  limit: number;
+  /** Für neue Puzzle (mix/new), in der freien Sitzung für alle. */
   ratingMin?: number | null;
   ratingMax?: number | null;
   theme?: string | null;
+  /** Nur mix hält sich daran. */
+  newPerDay?: number | null;
+}
+
+export interface NextPuzzle {
+  puzzle: PuzzleDto | null;
+  /** Jetzt fällige Karten außer dem gelieferten Puzzle. */
+  due: number;
+  /** Neue, die heute noch drankommen; null = keine Grenze. */
+  new_left: number | null;
 }
 
 export interface ReviewIn {
@@ -111,8 +123,26 @@ export const deactivateOpening = (slug: string) =>
 
 export const listActivated = () => invoke<OpeningSummary[]>('list_activated');
 
-export const nextBatch = (slug: string, filter: BatchFilter) =>
-  invoke<PuzzleDto[]>('next_batch', { slug, filter });
+/** Mitternacht in Ortszeit - ab da zählen die neuen Puzzle des Tages. */
+function dayStart(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export const nextPuzzle = (slug: string, filter: SessionFilter, exclude: string[]) =>
+  invoke<NextPuzzle>('next_puzzle', {
+    slug,
+    query: {
+      mode: filter.mode,
+      ratingMin: filter.ratingMin ?? null,
+      ratingMax: filter.ratingMax ?? null,
+      theme: filter.theme ?? null,
+      newPerDay: filter.newPerDay ?? null,
+      dayStart: dayStart(),
+      exclude,
+    },
+  });
 
 export const recordReview = (puzzleId: string, card: CardDto, review: ReviewIn) =>
   invoke<void>('record_review', { puzzleId, card, review });

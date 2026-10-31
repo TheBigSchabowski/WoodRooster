@@ -156,4 +156,18 @@ else
   echo "MainActivity aktualisiert: $MAIN_ACTIVITY"
 fi
 
+# --- App-Icon ---
+# `tauri android init` legt das Projekt mit Tauris Standard-Icon an, und
+# `tauri icon` schreibt den Hahn nur nach src-tauri/icons/android, solange es
+# gen/android noch nicht gibt. Bis 0.3.0 kam so das Tauri-Logo aufs Handy.
+# Deshalb hier jedes Mal die getrackten Icons ins generierte Projekt legen.
+ICON_SRC="src-tauri/icons/android"
+RES="src-tauri/gen/android/app/src/main/res"
+for dir in "$ICON_SRC"/*/; do
+  name="$(basename "$dir")"
+  mkdir -p "$RES/$name"
+  cp "$dir"* "$RES/$name/"
+done
+echo "App-Icon nach $RES uebernommen."
+
 echo "Android-Release-Setup abgeschlossen."

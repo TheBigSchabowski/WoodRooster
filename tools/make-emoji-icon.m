@@ -2,6 +2,12 @@
 //
 //   clang -framework AppKit -o /tmp/mkicon tools/make-emoji-icon.m
 //   /tmp/mkicon 🔨 tools/icon-source.png
+//   /tmp/mkicon 🔨 tools/icon-foreground.png --adaptive
+//
+// Mit --adaptive entsteht die Vordergrundebene fuer Androids adaptive Icons:
+// durchsichtiger Grund, das Emoji kleiner, damit es in der Schutzzone (die
+// inneren 66 von 108 dp) bleibt - der Launcher schneidet Kreis, Tropfen oder
+// Quadrat selbst zu und legt die Hintergrundfarbe darunter.
 //
 // Bewusst mit dem echten Systemfont statt nachgezeichnet: so sieht das Icon
 // genauso aus wie das Emoji ueberall sonst auf dem Geraet. In Objective-C und
@@ -13,7 +19,7 @@
 int main(int argc, const char *argv[]) {
   @autoreleasepool {
     if (argc < 3) {
-      fprintf(stderr, "Aufruf: %s <emoji> <ausgabe.png>\n", argv[0]);
+      fprintf(stderr, "Aufruf: %s <emoji> <ausgabe.png> [--adaptive]\n", argv[0]);
       return 1;
     }
     // Ohne laufende NSApplication zeichnet AppKit keinen Text.
@@ -22,9 +28,10 @@ int main(int argc, const char *argv[]) {
     NSString *emoji = [NSString stringWithUTF8String:argv[1]];
     NSString *out = [NSString stringWithUTF8String:argv[2]];
 
+    const BOOL adaptive = argc > 3 && strcmp(argv[3], "--adaptive") == 0;
     const NSInteger size = 1024;
     const CGFloat radius = 190;
-    const CGFloat fontSize = 620;
+    const CGFloat fontSize = adaptive ? 500 : 620;
 
     NSBitmapImageRep *rep = [[NSBitmapImageRep alloc]
         initWithBitmapDataPlanes:NULL
@@ -48,11 +55,15 @@ int main(int argc, const char *argv[]) {
     NSBezierPath *rounded = [NSBezierPath bezierPathWithRoundedRect:full
                                                            xRadius:radius
                                                            yRadius:radius];
-    [[NSColor colorWithSRGBRed:0x1c / 255.0
-                         green:0x21 / 255.0
-                          blue:0x2b / 255.0
-                         alpha:1.0] setFill];
-    [rounded fill];
+    // Fuer --adaptive bleibt der Grund durchsichtig; dieselbe Farbe steht dann
+    // in values/ic_launcher_background.xml.
+    if (!adaptive) {
+      [[NSColor colorWithSRGBRed:0x1c / 255.0
+                           green:0x21 / 255.0
+                            blue:0x2b / 255.0
+                           alpha:1.0] setFill];
+      [rounded fill];
+    }
 
     NSFont *font = [NSFont fontWithName:@"Apple Color Emoji" size:fontSize];
     if (!font) {

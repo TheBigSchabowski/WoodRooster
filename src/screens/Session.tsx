@@ -11,11 +11,11 @@ import { onCommand } from '../tapzones';
 import { Study } from './Study';
 import {
   fetchGame,
-  nextBatch,
+  nextPuzzle,
   recordReview,
   resetPuzzles,
   toggleFavorite,
-  type BatchFilter,
+  type SessionFilter,
   type GameInfo,
   type PuzzleDto,
 } from '../api/commands';
@@ -44,7 +44,7 @@ const PROMO_LABEL: Partial<Record<Role, string>> = {
 interface Props {
   slug: string;
   name: string;
-  filter: BatchFilter;
+  filter: SessionFilter;
   settings: SrsSettings;
   board: BoardPrefs;
   onBoard: (b: BoardPrefs) => void;
@@ -54,8 +54,24 @@ interface Props {
 export function Session({ slug, name, filter, settings, board, onBoard, onBack }: Props) {
   const scheduler = useMemo(() => makeScheduler(settings), [settings]);
   const pens = useMemo(() => pensFrom(board.pens), [board.pens]);
-  const [queue, setQueue] = useState<PuzzleDto[]>([]);
-  const [pos, setPos] = useState(0);
+  // Kein fester Stapel: das naechste Puzzle wird erst nach der Bewertung
+  // geholt. So kommt eine "Nochmal"-Karte nach ihrem Lernschritt in derselben
+  // Sitzung zurueck, und Beenden geht jederzeit ohne Verlust.
+  const [current, setCurrent] = useState<PuzzleDto | null>(null);
+  const [counts, setCounts] = useState<{ due: number; newLeft: number | null }>({
+    due: 0,
+    newLeft: null,
+  });
+  // "Noch mehr neue" schaltet von mix auf new um, wenn das Tageskontingent durch ist.
+  const [active, setActive] = useState<SessionFilter>(filter);
+  // Alle in dieser Sitzung gezeigten Puzzle, fuer "Dieselben nochmal" und die
+  // freie Sitzung (die nichts doppelt zeigt).
+  const seen = useRef<PuzzleDto[]>([]);
+  // Beim Nochmal-Durchgehen: die restlichen Puzzle; null = normale Sitzung.
+  const replayQueue = useRef<PuzzleDto[] | null>(null);
+  const [replaying, setReplaying] = useState(false);
+  const [replayPos, setReplayPos] = useState(0);
+  const [graded, setGraded] = useState(0);
   const [phase, setPhase] = useState<Phase>('loading');
   const [runner, setRunner] = useState<PuzzleRunner | null>(null);
   const [revision, setRevision] = useState(0);
@@ -67,7 +83,7 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
   const [game, setGame] = useState<GameInfo | 'loading' | 'error' | null>(null);
   const [tally, setTally] = useState({ solved: 0, slipped: 0 });
   const [note, setNote] = useState<string | null>(null);
-  // Gemerkte Puzzle dieser Sitzung; der Ausgangswert kommt aus dem Stapel.
+  // Gemerkte Puzzle dieser Sitzung; der Ausgangswert kommt mit jedem Puzzle.
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   // Blindmodus: das Brett ist anfangs offen und klappt nach board.blindSeconds
   // zu. Danach laesst es sich zum Nachsehen auf- und wieder zuklappen.
@@ -80,31 +96,60 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
   // Variantenbaum des gerade geloesten Puzzles; die Sitzung bleibt darunter stehen.
   const [studying, setStudying] = useState(false);
   const startedAt = useRef(Date.now());
+  // Schnelles Doppeltippen auf einen Bewertungsknopf soll nur einmal zaehlen.
+  const grading = useRef(false);
   const replyTimer = useRef<number | null>(null);
 
   // Jeder Zugversuch zaehlt hoch - auch der abgelehnte, damit das Brett
   // zurueckspringt.
   const tick = () => setRevision((n) => n + 1);
 
-  useEffect(() => {
-    (async () => {
-      const batch = await nextBatch(slug, filter);
-      setQueue(batch);
-      setFavorites(new Set(batch.filter((p) => p.favorite).map((p) => p.id)));
-      if (batch.length === 0) {
-        setPhase('empty');
-        return;
+  function show(p: PuzzleDto) {
+    if (!seen.current.some((x) => x.id === p.id)) seen.current.push(p);
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (p.favorite) next.add(p.id);
+      return next;
+    });
+    setCurrent(p);
+    setRunner(new PuzzleRunner(p));
+    setPhase('solving');
+    startedAt.current = Date.now();
+  }
+
+  /** Holt das naechste einzelne Puzzle; `last` kommt nicht gleich wieder dran. */
+  async function loadNext(f: SessionFilter, last: PuzzleDto | null) {
+    const rq = replayQueue.current;
+    if (rq) {
+      const p = rq.shift();
+      if (p) {
+        setReplayPos((n) => n + 1);
+        show(p);
+      } else {
+        replayQueue.current = null;
+        setReplaying(false);
+        setPhase('finished');
       }
-      setRunner(new PuzzleRunner(batch[0]));
-      setPhase('solving');
-      startedAt.current = Date.now();
-    })();
+      return;
+    }
+    const exclude =
+      f.mode === 'free' ? seen.current.map((p) => p.id) : last ? [last.id] : [];
+    const r = await nextPuzzle(slug, f, exclude);
+    setCounts({ due: r.due, newLeft: r.new_left });
+    if (!r.puzzle) {
+      setCurrent(null);
+      setPhase(seen.current.length > 0 ? 'finished' : 'empty');
+      return;
+    }
+    show(r.puzzle);
+  }
+
+  useEffect(() => {
+    loadNext(filter, null);
     return () => {
       if (replyTimer.current) window.clearTimeout(replyTimer.current);
     };
-  }, [slug, filter]);
-
-  const current = queue[pos];
+  }, [slug, filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Jedes Puzzle beginnt mit offenem Brett; blind laeuft dann die Uhr.
   useEffect(() => {
@@ -237,35 +282,49 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
   }
 
   async function grade(gradeValue: number) {
-    if (!preview || !current) return;
+    if (!current) return;
+    // Beim Nochmal-Durchgehen wird nicht bewertet: die Karten dort stammen von
+    // vorhin und wuerden den inzwischen gespeicherten Stand ueberschreiben.
+    if (replaying) {
+      advance();
+      return;
+    }
+    if (!preview || grading.current) return;
+    grading.current = true;
     const item = preview[gradeValue as keyof IPreview] as {
       card: Parameters<typeof fromCard>[0];
       log: Parameters<typeof toReview>[0];
     };
-    await recordReview(
-      current.id,
-      fromCard(item.card),
-      toReview(item.log, Date.now(), Date.now() - startedAt.current),
-    );
+    try {
+      await recordReview(
+        current.id,
+        fromCard(item.card),
+        toReview(item.log, Date.now(), Date.now() - startedAt.current),
+      );
+    } finally {
+      grading.current = false;
+    }
+    setGraded((n) => n + 1);
     advance();
   }
 
-  function advance() {
-    const next = pos + 1;
+  function advance(f: SessionFilter = active) {
+    const last = current;
     setFeedback('none');
     setPreview(null);
     setShowSolution(false);
     setGame(null);
     setPromotion(null);
     setStudying(false);
-    if (next >= queue.length) {
-      setPhase('finished');
-      return;
-    }
-    setPos(next);
-    setRunner(new PuzzleRunner(queue[next]));
-    setPhase('solving');
-    startedAt.current = Date.now();
+    setPhase('loading');
+    loadNext(f, last);
+  }
+
+  /** Tageskontingent durch, aber Lust auf mehr: ab hier nur noch neue. */
+  function moreNew() {
+    const f: SessionFilter = { ...active, mode: 'new' };
+    setActive(f);
+    advance(f);
   }
 
   // Bewerten mit der linken Hand auf YXCV, alternativ 1 bis 4. F merkt das
@@ -309,23 +368,25 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  /** Dieselbe Auswahl noch einmal, ohne am Wiederholungsplan zu ruetteln. */
+  /** Dieselben Puzzle noch einmal, ohne am Wiederholungsplan zu ruetteln. */
   function replay() {
-    setPos(0);
-    setRunner(new PuzzleRunner(queue[0]));
-    setPhase('solving');
+    const [first, ...rest] = seen.current;
+    if (!first) return;
+    replayQueue.current = rest;
+    setReplaying(true);
+    setReplayPos(1);
     setFeedback('none');
     setPreview(null);
     setShowSolution(false);
     setGame(null);
     setNote(null);
     setTally({ solved: 0, slipped: 0 });
-    startedAt.current = Date.now();
+    show(first);
   }
 
   /** Setzt die Karten dieser Puzzle zurueck - sie gelten dann wieder als neu. */
   async function forgetThese() {
-    const n = await resetPuzzles(queue.map((p) => p.id));
+    const n = await resetPuzzles(seen.current.map((p) => p.id));
     setNote(`${n.toLocaleString('de-DE')} Karten zurückgesetzt.`);
   }
 
@@ -350,7 +411,7 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
     }
   }
 
-  if (phase === 'loading') return <p className="muted pad">Lade Puzzle …</p>;
+  if (phase === 'loading' && !current) return <p className="muted pad">Lade Puzzle …</p>;
 
   if (phase === 'empty') {
     return (
@@ -362,17 +423,26 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
   }
 
   if (phase === 'finished') {
+    const dailyDone = active.mode === 'mix' && counts.newLeft === 0;
     return (
       <div className="screen pad center">
-        <h2>Sitzung beendet</h2>
+        <h2>Für jetzt alles erledigt</h2>
         <p>
           {tally.solved.toLocaleString('de-DE')} Puzzle bearbeitet
           {tally.slipped > 0 && `, davon ${tally.slipped} mit Fehlgriff oder Hilfe`}.
         </p>
+        {dailyDone && (
+          <p className="muted small">
+            Die neuen Puzzle für heute sind durch (Grenze in den Einstellungen).
+          </p>
+        )}
         <div className="actions finish-actions">
-          <button onClick={replay}>Dieselben nochmal</button>
+          {dailyDone && <button onClick={moreNew}>Noch mehr neue</button>}
+          <button className={dailyDone ? 'ghost' : ''} onClick={replay}>
+            Dieselben nochmal
+          </button>
           <button className="ghost" onClick={forgetThese}>
-            Fortschritt dieser {queue.length} Puzzle zurücksetzen
+            Fortschritt dieser {seen.current.length} Puzzle zurücksetzen
           </button>
           <button className="ghost" onClick={onBack}>
             Zurück zur Eröffnung
@@ -400,8 +470,16 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
         <button className="ghost" onClick={onBack}>
           ← Beenden
         </button>
-        <span className="progress">
-          {pos + 1} / {queue.length}
+        <span className="progress" title="geübt in dieser Sitzung · jetzt fällig · heute noch neu">
+          {replaying
+            ? `nochmal ${replayPos} / ${seen.current.length}`
+            : [
+                `${graded} geübt`,
+                active.mode !== 'free' && active.mode !== 'new' && `${counts.due} fällig`,
+                counts.newLeft !== null && `${counts.newLeft} neu`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
         </span>
         <span className="muted topbar-name">{name}</span>
         <button
@@ -570,7 +648,19 @@ export function Session({ slug, name, filter, settings, board, onBoard, onBack }
             </>
           )}
 
-          {phase === 'graded' && preview && (
+          {phase === 'graded' && replaying && (
+            <div className="grading">
+              <p className="verdict correct">Gelöst</p>
+              <p className="muted small">Nochmal-Durchgang — wird nicht bewertet.</p>
+              <div className="actions">
+                <button onClick={() => grade(3)}>
+                  Weiter <kbd>Leertaste</kbd>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {phase === 'graded' && !replaying && preview && (
             <div className="grading">
               <p className="verdict correct">
                 Gelöst

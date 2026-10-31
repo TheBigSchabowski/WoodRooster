@@ -1,6 +1,6 @@
 [package]
 name = "woodrooster"
-version = "0.3.0"
+version = "0.3.1"
 description = "Schachpuzzle mit Spaced Repetition"
 edition = "2021"
 rust-version = "1.77"
