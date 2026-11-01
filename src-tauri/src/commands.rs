@@ -33,11 +33,20 @@ pub struct CatalogEntry {
 /// ein '@', die Verwechslungsgefahr ist damit ausgeschlossen.
 pub const FAVORITES: &str = "@favorites";
 
+/// Pseudo-Slug fuer "alle faelligen": Karten aus jeder aktiven Eroeffnung und
+/// dem Favoritenordner. Das Android-Widget startet damit eine Sitzung im Modus
+/// "due". Karten entfernter Eroeffnungen bleiben liegen (siehe
+/// deactivate_opening) und zaehlen hier bewusst nicht mit.
+pub const DUE: &str = "@due";
+
 /// Womit eine Sitzung ihre Puzzle auswaehlt: entweder eine Eroeffnung oder der
 /// Favoritenordner.
 fn scope_predicate(slug: &str) -> &'static str {
     if slug == FAVORITES {
         "p.id IN (SELECT puzzle_id FROM favorite)"
+    } else if slug == DUE {
+        "(p.id IN (SELECT puzzle_id FROM favorite)
+          OR EXISTS (SELECT 1 FROM opening o WHERE o.slug = p.variation OR o.slug = p.family))"
     } else {
         "(p.variation = :slug OR p.family = :slug)"
     }
@@ -666,6 +675,11 @@ pub fn record_review(
 
 #[tauri::command]
 pub fn reset_srs(state: State<AppState>, slug: String, scope: String) -> Result<usize, String> {
+    // "Alle faelligen" umfasst jede Karte - Zuruecksetzen wuerde den ganzen
+    // Lernstand loeschen.
+    if slug == DUE {
+        return Err("Der Bereich aller fälligen Puzzle lässt sich nicht zurücksetzen.".into());
+    }
     let conn = state.conn.lock().unwrap();
     // Das Protokoll bleibt in jedem Fall erhalten - nur der Kartenzustand faellt weg.
     let extra = match scope.as_str() {
@@ -920,6 +934,30 @@ pub fn get_setting(state: State<AppState>, key: String) -> Result<Option<String>
 pub fn set_setting(state: State<AppState>, key: String, value: String) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     db::set_setting(&conn, &key, &value).map_err(|e| e.to_string())
+}
+
+// --------------------------------------------------------------- Widget
+
+/// Datei, in die MainActivity.kt die im Android-Widget angetippte Eroeffnung
+/// schreibt. Muss zu WIDGET_START dort passen.
+const WIDGET_START: &str = "widget-start";
+
+/// Die im Widget angetippte Eroeffnung, genau einmal: die Datei wird beim
+/// Lesen geloescht. Auf dem Desktop gibt es sie nie.
+#[tauri::command]
+pub fn take_widget_start(app: tauri::AppHandle) -> Option<String> {
+    use tauri::Manager;
+    let path = app.path().app_data_dir().ok()?.join(WIDGET_START);
+    take_file(&path)
+}
+
+fn take_file(path: &std::path::Path) -> Option<String> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    // Erst loeschen: laesst sich die Datei nicht entfernen, soll sie nicht bei
+    // jedem Sichtbarwerden der App erneut eine Sitzung starten.
+    std::fs::remove_file(path).ok()?;
+    let slug = raw.trim();
+    (!slug.is_empty()).then(|| slug.to_string())
 }
 
 // ------------------------------------------------------------- Lichess
@@ -1249,6 +1287,45 @@ mod tests {
 
     /// Eine Trainings-URL, ein blanker Slug und Unfug muessen klar
     /// auseinandergehalten werden - die Lichess-API tut das gerade nicht.
+    #[test]
+    fn alle_faelligen_quer_durch_die_eroeffnungen() {
+        let conn = test_db();
+        // 'b' kommt aus der aktiven Variante, 'c' aus keiner aktiven
+        // Eroeffnung, ist aber gemerkt. Beide sind faellig.
+        conn.execute_batch(
+            "INSERT INTO opening(slug, family, display_name, is_family, added_at, puzzle_count)
+               VALUES('Fam_Var', 'Fam', 'Fam Var', 0, 1, 2);
+             INSERT INTO card(puzzle_id, due, stability, difficulty, elapsed_days,
+                              scheduled_days, learning_steps, reps, lapses, state, last_review)
+               VALUES('c', 2000, 1.0, 5.0, 0.0, 1.0, 0, 1, 0, 2, 500);",
+        )
+        .unwrap();
+        let q = next("due", None, &[]);
+        let first = query_next(&conn, DUE, &q, 10_000).unwrap();
+        assert_eq!(id(&first), Some("b"));
+        assert_eq!(first.due, 1);
+        let q = next("due", None, &["b"]);
+        assert_eq!(id(&query_next(&conn, DUE, &q, 10_000).unwrap()), Some("c"));
+
+        // Ohne Merkung gehoert 'c' zu keiner aktiven Eroeffnung mehr.
+        conn.execute("DELETE FROM favorite WHERE puzzle_id = 'c'", []).unwrap();
+        let r = query_next(&conn, DUE, &next("due", None, &[]), 10_000).unwrap();
+        assert_eq!(id(&r), Some("b"));
+        assert_eq!(r.due, 0, "'c' zaehlt nicht mehr mit");
+        let q = next("due", None, &["b"]);
+        assert_eq!(id(&query_next(&conn, DUE, &q, 10_000).unwrap()), None);
+    }
+
+    #[test]
+    fn widget_start_gilt_genau_einmal() {
+        let path = std::env::temp_dir().join(format!("woodrooster-widget-{}", std::process::id()));
+        assert_eq!(take_file(&path), None);
+        std::fs::write(&path, "Trompowsky_Attack\n").unwrap();
+        assert_eq!(take_file(&path).as_deref(), Some("Trompowsky_Attack"));
+        assert!(!path.exists());
+        assert_eq!(take_file(&path), None);
+    }
+
     #[test]
     fn urls_werden_zu_slugs() {
         for (input, want) in [

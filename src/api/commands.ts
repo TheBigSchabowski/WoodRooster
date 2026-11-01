@@ -5,6 +5,9 @@ import { invoke } from '@tauri-apps/api/core';
 /** Pseudo-Slug des Favoritenordners; muss zu FAVORITES in commands.rs passen. */
 export const FAVORITES = '@favorites';
 
+/** Alle fälligen aus aktiven Eröffnungen und Favoriten; muss zu DUE in commands.rs passen. */
+export const DUE = '@due';
+
 export interface CatalogHit {
   slug: string;
   name: string;
@@ -180,3 +183,6 @@ export const getStudy = (puzzleId: string) => invoke<string | null>('get_study',
 /** null loescht den Baum. */
 export const saveStudy = (puzzleId: string, tree: string | null) =>
   invoke<void>('save_study', { puzzleId, tree });
+
+/** Die im Android-Widget angetippte Eröffnung, genau einmal; sonst null. */
+export const takeWidgetStart = () => invoke<string | null>('take_widget_start');

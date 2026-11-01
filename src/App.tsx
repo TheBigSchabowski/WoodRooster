@@ -4,8 +4,17 @@ import { Opening } from './screens/Opening';
 import { Session } from './screens/Session';
 import { Settings } from './screens/Settings';
 import { Study } from './screens/Study';
-import { getSetting, setSetting, type SessionFilter, type PuzzleDto } from './api/commands';
-import { DEFAULT_SETTINGS, type SrsSettings } from './srs/scheduler';
+import {
+  DUE,
+  FAVORITES,
+  getSetting,
+  listActivated,
+  setSetting,
+  takeWidgetStart,
+  type SessionFilter,
+  type PuzzleDto,
+} from './api/commands';
+import { DEFAULT_SETTINGS, difficultyBand, type SrsSettings } from './srs/scheduler';
 import { BOARD_KEY, DEFAULT_BOARD, type BoardPrefs } from './board/prefs';
 import { applyPieceColors } from './board/pieces';
 import { commandAt, commandOf, listenDoubleTaps, sendCommand } from './tapzones';
@@ -18,6 +27,13 @@ type View =
   | { name: 'settings' };
 
 const SETTINGS_KEY = 'srs';
+
+/** Dasselbe wie „Üben“ auf der Eröffnungsseite; „Alle fälligen“ nur Fälliges. */
+function practiceFilter(slug: string, s: SrsSettings): SessionFilter {
+  if (slug === DUE) return { mode: 'due' };
+  const [ratingMin, ratingMax] = slug === FAVORITES ? [null, null] : difficultyBand(s);
+  return { mode: 'mix', ratingMin, ratingMax, newPerDay: s.newPerDay };
+}
 
 export function App() {
   const [view, setView] = useState<View>({ name: 'home' });
@@ -100,6 +116,41 @@ export function App() {
     };
   }, []);
 
+  // Antippen einer Eröffnung im Android-Widget startet sofort die Sitzung.
+  // MainActivity legt den Slug ab; nachgesehen wird beim Start, beim
+  // Sichtbarwerden und auf ihr Signal hin, falls die App schon lief.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    const check = async () => {
+      const slug = await takeWidgetStart().catch(() => null);
+      if (!slug || !alive) return;
+      let label: string | undefined;
+      if (slug === FAVORITES) label = 'Gemerkte Puzzle';
+      else if (slug === DUE) label = 'Alle fälligen';
+      else label = (await listActivated().catch(() => [])).find((o) => o.slug === slug)?.name;
+      // Inzwischen entfernt: dann eben die Startseite.
+      if (!alive) return;
+      setRev((n) => n + 1);
+      setView(
+        label
+          ? { name: 'session', slug, label, filter: practiceFilter(slug, settingsRef.current) }
+          : { name: 'home' },
+      );
+    };
+    const onVisible = () => document.visibilityState === 'visible' && check();
+    check();
+    window.addEventListener('woodrooster-widget', check);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      alive = false;
+      window.removeEventListener('woodrooster-widget', check);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [ready]);
+
   if (!ready) return <p className="muted pad">Starte …</p>;
 
   return (
@@ -152,6 +203,8 @@ export function App() {
       case 'session':
         return (
           <Session
+            // Aus dem Widget kann mitten in einer Sitzung eine andere kommen.
+            key={view.slug}
             slug={view.slug}
             name={view.label}
             filter={view.filter}
@@ -160,7 +213,12 @@ export function App() {
             onBoard={saveBoard}
             onBack={() => {
               setRev((n) => n + 1);
-              setView({ name: 'opening', slug: view.slug, label: view.label });
+              // „Alle fälligen“ hat keine eigene Eröffnungsseite.
+              setView(
+                view.slug === DUE
+                  ? { name: 'home' }
+                  : { name: 'opening', slug: view.slug, label: view.label },
+              );
             }}
           />
         );

@@ -138,6 +138,7 @@ pub fn run() {
             commands::get_setting,
             commands::set_setting,
             commands::fetch_game,
+            commands::take_widget_start,
         ])
         .run(tauri::generate_context!())
         .expect("WoodRooster konnte nicht gestartet werden");

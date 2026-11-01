@@ -19,6 +19,11 @@ codebase.
 > board squares in **any hex colour**, and the **drawing mode** from FireHorse
 > (arrows, circles and filled squares in six freely coloured pens).
 >
+> **New in 0.3.2:** a **home screen widget** on Android. It lists every
+> opening with its due and new puzzles, plus an **"Alle fälligen"** row that
+> gathers everything due across all openings. Tap a row and the session starts
+> right away. The counts update by themselves when a card falls due.
+>
 > **New in 0.3.1:** practice is **one puzzle at a time** instead of fixed
 > batches — due puzzles first, then new ones up to a daily limit, every grade
 > saved at once, and a puzzle you missed comes back in the same session.
@@ -36,9 +41,9 @@ codebase.
 > solved puzzle.
 >
 > **Downloads.** Ready-to-install packages are available on the [Releases page](https://github.com/TheBigSchabowski/WoodRooster/releases/latest):
-> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_android-arm64.apk)
-> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_macos-arm64.dmg)
-> - [Linux AppImage (x86_64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-x86_64.AppImage) · [.deb](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-amd64.deb)
+> - [Android APK (arm64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_android-arm64.apk)
+> - [macOS DMG (Apple Silicon)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_macos-arm64.dmg)
+> - [Linux AppImage (x86_64)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_linux-x86_64.AppImage) · [.deb](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_linux-amd64.deb)
 >
 > **Credits, including AI assistance:** see **[CREDITS.md](CREDITS.md)**.
 > **License:** GPL-3.0-or-later, see [LICENSE](LICENSE).
@@ -98,6 +103,19 @@ dem alten Schachtrainer; dort beginnt der Lernstand neu.
   wählbar (Einstellungen → Zeichenstifte): aus 16 Farben oder als eigener Code
   mit Namen, z. B. `#7FFFD4` „Aquamarin“.
 
+- **Widget für den Android-Startbildschirm:** „Eröffnungen“ in der
+  Widget-Auswahl (3×2, in der Größe veränderbar). Ganz oben steht **„Alle
+  fälligen“**: jedes fällige Puzzle aus allen aktiven Eröffnungen und den
+  gemerkten, antippen übt genau diese (nur Fälliges, nichts Neues; Karten
+  entfernter Eröffnungen zählen nicht). Dort steht immer die Zahl, auch
+  „0 fällig“. Darunter die gemerkten Puzzle und
+  jede Eröffnung mit „fällig“ und „neu“ wie die Kacheln auf der Startseite;
+  antippen startet sofort die Sitzung (erst Fälliges, dann Neues bis zur
+  Tagesgrenze, wie „Üben“). Die Kopfzeile öffnet einfach die App. Die Zahlen liest das Widget nur lesend direkt aus
+  der Lernstand-Datei, auch bei geschlossener App. Es frischt sich auf, sobald
+  die nächste Karte fällig wird (so taucht auch eine „Nochmal“-Karte nach
+  einer Minute auf), sofort beim Verlassen der App und sonst alle 30 Minuten.
+
 - **Variantenbaum für gemerkte Puzzle:** Nur für Puzzle mit ♥ — nach dem
   Lösen `A` oder „Variantenbaum“, oder im Ordner **Gemerkte Puzzle** auf ein
   Puzzle tippen. Die Lösung
@@ -117,9 +135,9 @@ Fertig gebaute Installationsdateien können direkt heruntergeladen werden — ke
 
 | Plattform | Download | Details |
 |---|---|---|
-| **Android** | [`.apk` herunterladen (v0.3.1)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
-| **macOS** | [`.dmg` herunterladen (v0.3.1)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
-| **Linux** | [AppImage (v0.3.1)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-x86_64.AppImage) · [`.deb`](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.1_linux-amd64.deb) | x86_64, ab Ubuntu 22.04 / Debian 12 |
+| **Android** | [`.apk` herunterladen (v0.3.2)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_android-arm64.apk) | Android 7.0+ (arm64, selbstsigniert) |
+| **macOS** | [`.dmg` herunterladen (v0.3.2)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_macos-arm64.dmg) | Apple Silicon (M1 und neuer) |
+| **Linux** | [AppImage (v0.3.2)](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_linux-x86_64.AppImage) · [`.deb`](https://github.com/TheBigSchabowski/WoodRooster/releases/latest/download/WoodRooster_0.3.2_linux-amd64.deb) | x86_64, ab Ubuntu 22.04 / Debian 12 |
 
 Alle Versionen und Prüfsummen finden sich unter **[Releases](https://github.com/TheBigSchabowski/WoodRooster/releases)**.
 
@@ -319,6 +337,9 @@ tools/test-solve.mjs      spielt echte Puzzle durch, prüft die Abspiel-Logik
 tools/test-blind.mjs      tippt echte Lösungen blind ein, prüft das Zeichnen
 tools/test-study.mjs      prüft den Variantenbaum, auch an 1.200 echten Puzzlen
 tools/android-env.sh      Umgebungsvariablen für den Android-Build
+tools/android/            MainActivity und Widget (Kotlin, Layouts); android-sign.sh
+                          kopiert sie ins generierte Projekt und traegt das Widget
+                          ins Manifest ein
 
 src/board/solve.ts        Abspiel-Logik eines Puzzles, getippte Züge, Zugliste
 src/board/PuzzleBoard.tsx Brett (chessground), Zeichenmodus, eigene Feldfarben

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dieselben Holztoene wie src/styles.css. -->
+<resources>
+    <color name="widget_text">#F2EAE0</color>
+    <color name="widget_muted">#A39686</color>
+    <color name="widget_accent">#F2A93B</color>
+    <color name="widget_due">#72B4FF</color>
+    <color name="widget_new">#8CD27B</color>
+    <color name="widget_fav">#EF6A8A</color>
+</resources>

@@ -156,6 +156,53 @@ else
   echo "MainActivity aktualisiert: $MAIN_ACTIVITY"
 fi
 
+# --- Widget ---
+# Das Eroeffnungs-Widget fuer den Startbildschirm: Kotlin, Layouts und der
+# Eintrag im Manifest. Wie die MainActivity jedes Mal auf den getrackten Stand.
+JAVA_DIR="$(dirname "$MAIN_ACTIVITY")"
+cp tools/android/OpeningsWidget.kt "$JAVA_DIR/OpeningsWidget.kt"
+for dir in tools/android/res/*/; do
+  name="$(basename "$dir")"
+  mkdir -p "src-tauri/gen/android/app/src/main/res/$name"
+  cp "$dir"* "src-tauri/gen/android/app/src/main/res/$name/"
+done
+python3 - src-tauri/gen/android/app/src/main/AndroidManifest.xml <<'PYEOF'
+import io
+import sys
+
+path = sys.argv[1]
+s = io.open(path, encoding="utf-8").read()
+marker = "WOODROOSTER_WIDGET"
+if marker in s:
+    print("Widget steht bereits im Manifest.")
+    raise SystemExit(0)
+
+entry = """        <!-- WOODROOSTER_WIDGET: eingetragen von tools/android-sign.sh -->
+        <receiver
+          android:name=".OpeningsWidget"
+          android:exported="false"
+          android:label="@string/widget_label">
+          <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          </intent-filter>
+          <meta-data
+            android:name="android.appwidget.provider"
+            android:resource="@xml/widget_openings_info" />
+        </receiver>
+        <service
+          android:name=".OpeningsWidgetService"
+          android:exported="false"
+          android:permission="android.permission.BIND_REMOTEVIEWS" />
+    </application>"""
+anchor = "    </application>"
+if anchor not in s:
+    raise SystemExit("</application> nicht gefunden; Manifest wurde nicht angepasst.")
+s = s.replace(anchor, entry, 1)
+io.open(path, mode="w", encoding="utf-8").write(s)
+print("Widget im Manifest eingetragen.")
+PYEOF
+echo "Widget nach src-tauri/gen/android uebernommen."
+
 # --- App-Icon ---
 # `tauri android init` legt das Projekt mit Tauris Standard-Icon an, und
 # `tauri icon` schreibt den Hahn nur nach src-tauri/icons/android, solange es

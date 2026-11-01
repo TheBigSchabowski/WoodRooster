@@ -1,7 +1,9 @@
 package de.leidenschaftlicheslernen.woodrooster
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 import java.io.File
 import java.io.FileOutputStream
@@ -10,14 +12,62 @@ class MainActivity : TauriActivity() {
   companion object {
     private const val TAG = "WoodRooster"
     private val RESOURCE_FILES = listOf("openings.json", "openings.pack")
+
+    /** Muss zu WIDGET_START in commands.rs passen. */
+    private const val WIDGET_START = "widget-start"
   }
+
+  private var webView: WebView? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // The resources must exist before super.onCreate(). Tauri initializes the
     // Rust runtime during the superclass call and opens openings.pack there.
     extractResourcesIfNeeded()
+    // A recreated activity (or one reopened from recents) carries the old
+    // widget intent again; only a fresh tap may start a session.
+    if (savedInstanceState == null) takeWidgetIntent(intent)
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+  }
+
+  override fun onWebViewCreate(webView: WebView) {
+    super.onWebViewCreate(webView)
+    this.webView = webView
+  }
+
+  // The app is already running: singleTask delivers the widget tap here.
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    if (takeWidgetIntent(intent)) {
+      // The frontend also checks on startup and when it becomes visible; the
+      // event just makes the switch immediate.
+      webView?.evaluateJavascript("window.dispatchEvent(new Event('woodrooster-widget'))", null)
+    }
+  }
+
+  // Leaving the app is the moment the counts on the home screen are stale.
+  override fun onPause() {
+    super.onPause()
+    OpeningsWidget.refresh(this)
+  }
+
+  /**
+   * A tap on an opening in the home screen widget. The slug goes into a file
+   * that the frontend picks up via `take_widget_start`; Rust deletes it, so it
+   * starts exactly one session.
+   */
+  private fun takeWidgetIntent(intent: Intent?): Boolean {
+    if (intent == null) return false
+    if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return false
+    val slug = intent.getStringExtra(OpeningsWidget.EXTRA_SLUG) ?: return false
+    intent.removeExtra(OpeningsWidget.EXTRA_SLUG)
+    return try {
+      File(applicationInfo.dataDir, WIDGET_START).writeText(slug)
+      true
+    } catch (e: Exception) {
+      Log.w(TAG, "Could not hand the widget tap to the app", e)
+      false
+    }
   }
 
   private fun extractResourcesIfNeeded() {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Getrennt von strings.xml, die `tauri android init` erzeugt. -->
+<resources>
+    <string name="widget_label">Eröffnungen</string>
+    <string name="widget_description">Fällige und neue Puzzle je Eröffnung – antippen und üben</string>
+    <string name="widget_empty">Noch keine Eröffnungen.\nAntippen, um WoodRooster zu öffnen.</string>
+</resources>
